@@ -3,6 +3,7 @@
 
 import { monoToCanvas, type PackedBitmap } from "./bitmap";
 import type { RawRow, Row } from "./template";
+import { t } from "./i18n";
 
 export interface PreviewSource {
   rows: Row[];
@@ -45,7 +46,7 @@ function layoutPaper(): void {
   const gap = $("pv-gap");
   gap.style.aspectRatio = `${inf.paperW} / ${Math.max(1, inf.gapDots)}`;
   gap.style.minHeight = "22px";
-  $("pv-gap-text").textContent = `間隙 ${inf.gapMm} mm（標籤與標籤之間的空白）`;
+  $("pv-gap-text").textContent = t("間隙 {mm} mm（標籤與標籤之間的空白）", { mm: inf.gapMm });
   $("pv-gap").hidden = inf.gapDots <= 0;
 }
 
@@ -55,7 +56,7 @@ async function showPage(i: number): Promise<void> {
   const inf = api.info();
   const total = src.rows.length;
 
-  $("pv-page").textContent = total > 1 ? `第 ${page + 1} / ${total} 張（${src.names[page]}）` : src.from;
+  $("pv-page").textContent = total > 1 ? t("第 {n} / {total} 張（{name}）", { n: page + 1, total, name: src.names[page] }) : src.from;
   $<HTMLButtonElement>("pv-prev").disabled = page <= 0;
   $<HTMLButtonElement>("pv-next").disabled = page >= total - 1;
   $("pv-nav").hidden = total <= 1;
@@ -65,7 +66,7 @@ async function showPage(i: number): Promise<void> {
     try {
       r = await api.render(src.rows[page], src.raws[page]);
     } catch (e) {
-      if (my === token) $("pv-info").textContent = `渲染失敗：${String(e)}`;
+      if (my === token) $("pv-info").textContent = t("渲染失敗：{err}", { err: String(e) });
       return;
     }
     cache.set(page, r);
@@ -96,10 +97,10 @@ function fillInfo(): void {
   const inf = api.info();
   const total = src.rows.length;
   $("pv-info").textContent =
-    `紙張 ${inf.paperWmm} × ${inf.paperHmm} mm（${inf.paperW} × ${inf.paperH} 點）　標籤 ${inf.tplWmm} × ${inf.tplHmm} mm　${inf.summary}`;
+    t("紙張 {pw} × {ph} mm（{pdw} × {pdh} 點）　標籤 {tw} × {th} mm　", { pw: inf.paperWmm, ph: inf.paperHmm, pdw: inf.paperW, pdh: inf.paperH, tw: inf.tplWmm, th: inf.tplHmm }) + inf.summary;
   const sheets = total * inf.copies;
-  $("pv-total").textContent = `${total} 筆資料 × 每筆 ${inf.copies} 張 = ${sheets} 張`;
-  $("pv-print").textContent = `列印 ${sheets} 張`;
+  $("pv-total").textContent = t("{total} 筆資料 × 每筆 {copies} 張 = {sheets} 張", { total, copies: inf.copies, sheets });
+  $("pv-print").textContent = t("列印 {sheets} 張", { sheets });
 }
 
 export async function openPreview(): Promise<void> {

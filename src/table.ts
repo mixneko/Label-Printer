@@ -4,6 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { Raw, RawRow, Row } from "./template";
+import { t } from "./i18n";
 
 /** 儲存格格式（只有 Excel 才有：文字顏色、底色、粗體） */
 interface CellStyle {
@@ -46,7 +47,7 @@ export function selectedRows(): { rows: Row[]; raws: RawRow[]; names: string[] }
   return {
     rows: idx.map(rowOf),
     raws: idx.map(rawOf),
-    names: idx.map((i) => `${path.toLowerCase().endsWith(".csv") ? "" : "Excel "}第 ${data!.rowNumbers[i] ?? i + 1} 列`),
+    names: idx.map((i) => `${path.toLowerCase().endsWith(".csv") ? "" : "Excel "}${t("第 {n} 列", { n: data!.rowNumbers[i] ?? i + 1 })}`),
   };
 }
 
@@ -107,15 +108,15 @@ async function importFile(): Promise<void> {
     if (typeof picked !== "string") return;
     path = picked;
     await load();
-    h.onStatus(`已載入資料來源：${printableCount()} 筆資料，勾選要列印的列`, "ok");
+    h.onStatus(t("已載入資料來源：{n} 筆資料，勾選要列印的列", { n: printableCount() }), "ok");
   } catch (e) {
-    h.onStatus(`載入資料來源失敗：${String(e)}`, "err");
+    h.onStatus(t("載入資料來源失敗：{err}", { err: String(e) }), "err");
   }
 }
 
 function updateCount(): void {
   const total = printableCount();
-  $("data-count").textContent = `已選 ${checked.size} / ${total} 列`;
+  $("data-count").textContent = t("已選 {n} / {total} 列", { n: checked.size, total });
   $<HTMLButtonElement>("data-print").disabled = checked.size === 0;
   $<HTMLButtonElement>("data-preview").disabled = checked.size === 0;
   const all = $<HTMLInputElement>("data-check-all");
@@ -142,7 +143,7 @@ function render(): void {
     ...data.headers.map((name) => {
       const b = el("button", `{{${name}}}`, "chip");
       b.type = "button";
-      b.title = "插入到選取的物件內容";
+      b.title = t("插入到選取的物件內容");
       b.addEventListener("click", () => h.onInsertVar(name));
       return b;
     }),
@@ -154,7 +155,7 @@ function render(): void {
   const all = el("input");
   all.type = "checkbox";
   all.id = "data-check-all";
-  all.title = "全選 / 全不選";
+  all.title = t("全選 / 全不選");
   all.addEventListener("change", () => (all.checked ? selectAll() : selectNone()));
   allTh.append(all);
   head.append(allTh, el("th", "#"), ...data.headers.map((n) => el("th", n)));
@@ -268,8 +269,8 @@ export function initTable(handlers: TableHandlers): void {
   $("data-reload").addEventListener("click", () => {
     if (!path) return;
     load(data?.sheet).then(
-      () => h.onStatus(`已重新讀取，共 ${printableCount()} 筆資料`, "ok"),
-      (e) => h.onStatus(`重新讀取失敗：${String(e)}`, "err"),
+      () => h.onStatus(t("已重新讀取，共 {n} 筆資料", { n: printableCount() }), "ok"),
+      (e) => h.onStatus(t("重新讀取失敗：{err}", { err: String(e) }), "err"),
     );
   });
   $<HTMLSelectElement>("data-sheet").addEventListener("change", (e) => {

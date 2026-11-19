@@ -20,7 +20,7 @@ export async function launch({ outDir = ".tools", mock, prefix, width = 1400, he
   mkdirSync(OUT, { recursive: true });
   const server = await devServer();
   const debugPort = await freePort();
-  const edge = spawn(EDGE, ["--headless=new", `--remote-debugging-port=${debugPort}`, `--user-data-dir=${SCRATCH}\\edge-${prefix}`, "--hide-scrollbars", "--no-first-run", "about:blank"], { stdio: "ignore" });
+  const edge = spawn(EDGE, ["--headless=new", `--remote-debugging-port=${debugPort}`, `--user-data-dir=${SCRATCH}\\edge-${prefix}`, "--lang=zh-TW", "--hide-scrollbars", "--no-first-run", "about:blank"], { stdio: "ignore" });
   let page;
   for (let i = 0; i < 40 && !page; i++) {
     await sleep(500);

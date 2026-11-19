@@ -5,6 +5,7 @@
 // 實際套用時由後端用 Excel 的格式碼重新格式化該儲存格的原始值（見 main.ts 的 resolveFormats）。
 
 import { PLACEHOLDER, parsePlaceholder, placeholdersOf } from "./template";
+import { N, t } from "./i18n";
 
 interface Preset {
   value: string;
@@ -13,40 +14,40 @@ interface Preset {
 
 const GROUPS: { title: string; items: Preset[] }[] = [
   {
-    title: "日期",
+    title: N("日期"),
     items: [
       { value: "yyyy/mm/dd", label: "yyyy/mm/dd　2026/11/08" },
       { value: "yyyy/m/d", label: "yyyy/m/d　2026/11/8" },
       { value: "yyyy-mm-dd", label: "yyyy-mm-dd　2026-11-08" },
-      { value: "yyyy年m月d日", label: "yyyy年m月d日　2026年11月8日" },
-      { value: "yyyy年mm月dd日", label: "yyyy年mm月dd日　2026年11月08日" },
+      { value: "yyyy年m月d日", label: N("yyyy年m月d日　2026年11月8日") },
+      { value: "yyyy年mm月dd日", label: N("yyyy年mm月dd日　2026年11月08日") },
       { value: "mm/dd/yyyy", label: "mm/dd/yyyy　11/08/2026" },
       { value: "dd/mm/yyyy", label: "dd/mm/yyyy　08/11/2026" },
       { value: "yyyymmdd", label: "yyyymmdd　20261108" },
-      { value: "[$-404]e/m/d", label: "民國 e/m/d　115/11/8" },
-      { value: '[$-404]ggge"年"m"月"d"日"', label: "民國年月日　民國115年11月8日" },
-      { value: "yyyy/mm/dd hh:mm", label: "日期＋時間　2026/11/08 14:05" },
-      { value: "hh:mm", label: "只顯示時間　14:05" },
+      { value: "[$-404]e/m/d", label: N("民國 e/m/d　115/11/8") },
+      { value: '[$-404]ggge"年"m"月"d"日"', label: N("民國年月日　民國115年11月8日") },
+      { value: "yyyy/mm/dd hh:mm", label: N("日期＋時間　2026/11/08 14:05") },
+      { value: "hh:mm", label: N("只顯示時間　14:05") },
     ],
   },
   {
-    title: "數字",
+    title: N("數字"),
     items: [
-      { value: "0", label: "0　整數（12.5 → 13）" },
-      { value: "0.0", label: "0.0　一位小數" },
-      { value: "0.00", label: "0.00　兩位小數（30 → 30.00）" },
-      { value: "#,##0", label: "#,##0　千分位（1234567 → 1,234,567）" },
-      { value: "#,##0.00", label: "#,##0.00　千分位＋兩位小數" },
-      { value: "0000", label: "0000　補零到 4 位（12 → 0012）" },
-      { value: "00000", label: "00000　補零到 5 位（12 → 00012）" },
-      { value: "0%", label: "0%　百分比（0.256 → 26%）" },
-      { value: "0.0%", label: "0.0%　百分比一位小數" },
+      { value: "0", label: N("0　整數（12.5 → 13）") },
+      { value: "0.0", label: N("0.0　一位小數") },
+      { value: "0.00", label: N("0.00　兩位小數（30 → 30.00）") },
+      { value: "#,##0", label: N("#,##0　千分位（1234567 → 1,234,567）") },
+      { value: "#,##0.00", label: N("#,##0.00　千分位＋兩位小數") },
+      { value: "0000", label: N("0000　補零到 4 位（12 → 0012）") },
+      { value: "00000", label: N("00000　補零到 5 位（12 → 00012）") },
+      { value: "0%", label: N("0%　百分比（0.256 → 26%）") },
+      { value: "0.0%", label: N("0.0%　百分比一位小數") },
     ],
   },
 ];
 
 const CUSTOM = "__custom__";
-const AUTO_LABEL = "自動（照 Excel 儲存格的格式）";
+const AUTO_LABEL = N("自動（照 Excel 儲存格的格式）");
 
 /** 格式碼不可含這些字元，否則會破壞 {{欄位|格式}} 的寫法 */
 const sanitize = (f: string): string => f.replace(/[|{}]/g, "").trim();
@@ -90,19 +91,19 @@ export function renderFormatList(container: HTMLElement, content: string, onChan
     title.textContent = `{{${name}}}`;
 
     const select = document.createElement("select");
-    select.append(new Option(AUTO_LABEL, ""));
+    select.append(new Option(t(AUTO_LABEL), ""));
     for (const g of GROUPS) {
       const og = document.createElement("optgroup");
-      og.label = g.title;
-      og.append(...g.items.map((i) => new Option(i.label, i.value)));
+      og.label = t(g.title);
+      og.append(...g.items.map((i) => new Option(t(i.label), i.value)));
       select.append(og);
     }
-    select.append(new Option("自訂格式…", CUSTOM));
+    select.append(new Option(t("自訂格式…"), CUSTOM));
 
     const custom = document.createElement("input");
     custom.type = "text";
     custom.className = "fmt-custom";
-    custom.placeholder = "輸入 Excel 格式碼，例如 yyyy/mm/dd";
+    custom.placeholder = t("輸入 Excel 格式碼，例如 yyyy/mm/dd");
     custom.spellcheck = false;
 
     const isCustom = format !== "" && !known.has(format);

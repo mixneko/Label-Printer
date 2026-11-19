@@ -1,9 +1,10 @@
 /** 外觀：自動（跟隨系統，預設）／亮／暗。選擇會記在 localStorage，下次開啟沿用。 */
+import { N, t } from "./i18n";
 export type Theme = "auto" | "light" | "dark";
 const KEY = "label-printer.theme";
 const ORDER: Theme[] = ["auto", "light", "dark"];
-const TAG: Record<Theme, string> = { auto: "A", light: "亮", dark: "暗" };
-const NAME: Record<Theme, string> = { auto: "自動（跟隨系統）", light: "亮色", dark: "暗色" };
+const TAG: Record<Theme, string> = { auto: N("A"), light: N("亮"), dark: N("暗") };
+const NAME: Record<Theme, string> = { auto: N("自動（跟隨系統）"), light: N("亮色"), dark: N("暗色") };
 
 export function loadTheme(): Theme {
   try {
@@ -25,9 +26,9 @@ export function initTheme(btn: HTMLElement): void {
   const show = (): void => {
     applyTheme(cur);
     btn.dataset.theme = cur;
-    btn.querySelector(".theme-tag")!.textContent = TAG[cur];
+    btn.querySelector(".theme-tag")!.textContent = t(TAG[cur]);
     const next = ORDER[(ORDER.indexOf(cur) + 1) % ORDER.length];
-    btn.title = `外觀：${NAME[cur]}（按一下改為「${NAME[next]}」）`;
+    btn.title = t("外觀：{cur}（按一下改為「{next}」）", { cur: t(NAME[cur]), next: t(NAME[next]) });
     btn.setAttribute("aria-label", btn.title);
   };
   btn.addEventListener("click", () => {
@@ -35,5 +36,6 @@ export function initTheme(btn: HTMLElement): void {
     try { localStorage.setItem(KEY, cur); } catch { /* 記不住也沒關係 */ }
     show();
   });
+  window.addEventListener("langchange", show);
   show();
 }

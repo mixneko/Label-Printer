@@ -6,6 +6,9 @@ import { ask, open, save } from "@tauri-apps/plugin-dialog";
 import { askClose } from "./closedialog";
 import { showAbout, showLicenses } from "./about";
 import { initTheme } from "./theme";
+import { checkForUpdate, maybeShowWhatsNew, showWhatsNew } from "./update";
+import { N, applyDom, currentLang, detectLang, saveLang, setLang, t as tr } from "./i18n";
+import { LANG_NAMES, LOCALES, type Lang } from "./locales";
 import { attachGuides, guidesEnabled, setGuidesEnabled } from "./guides";
 import { calibrationElements } from "./calibration";
 import { canvasToMono, monoToCanvas, toBase64, type PackedBitmap } from "./bitmap";
@@ -37,6 +40,10 @@ let layer: Konva.Layer;
 let transformer: Konva.Transformer;
 let selected: Konva.Shape | null = null;
 
+function updateStageCaption(): void {
+  $("stage-caption").textContent = tr("標籤 {tw} × {th} mm（紙張 {pw} × {ph} mm）", { tw: settings.tplWmm, th: settings.tplHmm, pw: settings.paperWmm, ph: settings.paperHmm });
+}
+
 function buildStage(): void {
   stage?.destroy();
   const w = mmToDots(settings.tplWmm);
@@ -45,7 +52,7 @@ function buildStage(): void {
   layer = new Konva.Layer({ imageSmoothingEnabled: false });
   stage.add(layer);
   layer.add(new Konva.Rect({ x: 0, y: 0, width: w, height: h, fill: "white", listening: false }));
-  $("stage-caption").textContent = `標籤 ${settings.tplWmm} × ${settings.tplHmm} mm（紙張 ${settings.paperWmm} × ${settings.paperHmm} mm）`;
+  updateStageCaption();
   transformer = new Konva.Transformer({ rotateEnabled: true, keepRatio: true });
   layer.add(transformer);
 
@@ -143,7 +150,7 @@ let pasteCount = 0;
 function copyNode(n: Konva.Shape): void {
   clip = serialize(n);
   pasteCount = 0;
-  setStatus("已複製，按 Ctrl+V 貼上", "ok");
+  setStatus(tr("已複製，按 Ctrl+V 貼上"), "ok");
 }
 
 function cutNode(n: Konva.Shape): void {
@@ -172,18 +179,18 @@ function alignNode(n: Konva.Shape, how: Align): void {
 
 function showElementMenu(n: Konva.Shape | null, x: number, y: number): void {
   if (!n) {
-    showMenu(x, y, [{ label: "貼上", hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() }]);
+    showMenu(x, y, [{ label: tr("貼上"), hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() }]);
     return;
   }
   const locked = !!n.getAttr("locked");
-  const props: MenuItem = { label: "屬性…", hint: "Alt+Enter", onClick: () => openProps(n) };
+  const props: MenuItem = { label: tr("屬性…"), hint: "Alt+Enter", onClick: () => openProps(n) };
 
   if (locked) {
     showMenu(x, y, [
-      { label: "複製", hint: "Ctrl+C", onClick: () => copyNode(n) },
-      { label: "貼上", hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() },
+      { label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNode(n) },
+      { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() },
       { separator: true },
-      { label: "解除鎖定", onClick: () => toggleLocked(n) },
+      { label: tr("解除鎖定"), onClick: () => toggleLocked(n) },
       { separator: true },
       props,
     ]);
@@ -191,32 +198,32 @@ function showElementMenu(n: Konva.Shape | null, x: number, y: number): void {
   }
 
   const aligns = (["left", "hcenter", "right", "top", "vcenter", "bottom"] as Align[]).map((how): MenuItem => ({
-    label: `對齊標籤：${ALIGN_LABEL[how]}`,
+    label: tr("對齊標籤：{how}", { how: tr(ALIGN_LABEL[how]) }),
     onClick: () => alignNode(n, how),
   }));
   showMenu(x, y, [
-    { label: "剪下", hint: "Ctrl+X", onClick: () => cutNode(n) },
-    { label: "複製", hint: "Ctrl+C", onClick: () => copyNode(n) },
-    { label: "貼上", hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() },
-    { label: "重複", hint: "Ctrl+D", onClick: () => void duplicateNode(n) },
+    { label: tr("剪下"), hint: "Ctrl+X", onClick: () => cutNode(n) },
+    { label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNode(n) },
+    { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() },
+    { label: tr("重複"), hint: "Ctrl+D", onClick: () => void duplicateNode(n) },
     { separator: true },
     {
-      label: "排列",
+      label: tr("排列"),
       items: [
-        { label: "置頂", onClick: () => moveElement(n, "top") },
-        { label: "上移一層", onClick: () => moveElement(n, "up") },
-        { label: "下移一層", onClick: () => moveElement(n, "down") },
-        { label: "置底", onClick: () => moveElement(n, "bottom") },
+        { label: tr("置頂"), onClick: () => moveElement(n, "top") },
+        { label: tr("上移一層"), onClick: () => moveElement(n, "up") },
+        { label: tr("下移一層"), onClick: () => moveElement(n, "down") },
+        { label: tr("置底"), onClick: () => moveElement(n, "bottom") },
         { separator: true },
         ...aligns.slice(0, 3),
         { separator: true },
         ...aligns.slice(3),
       ],
     },
-    { label: "鎖定", onClick: () => toggleLocked(n) },
-    { label: n.visible() ? "隱藏" : "顯示", onClick: () => toggleVisible(n) },
+    { label: tr("鎖定"), onClick: () => toggleLocked(n) },
+    { label: n.visible() ? tr("隱藏") : tr("顯示"), onClick: () => toggleVisible(n) },
     { separator: true },
-    { label: "刪除", hint: "Delete", onClick: () => removeNode(n) },
+    { label: tr("刪除"), hint: "Delete", onClick: () => removeNode(n) },
     { separator: true },
     props,
   ]);
@@ -325,7 +332,7 @@ function syncBoundedUi(): void {
   const on = $<HTMLInputElement>("prop-bounded").checked;
   $("bounded-opts").hidden = !on;
   // 沒有勾選時，字級就是文字實際的字級；勾選後它是「最大字級」
-  $("prop-size-label").textContent = on ? "最大字級 (dots)" : "字級 (dots)";
+  $("prop-size-label").textContent = on ? tr("最大字級 (dots)") : tr("字級 (dots)");
 }
 
 /** QR 屬性：大小欄位與「每個模組幾點」的說明 */
@@ -337,15 +344,15 @@ function updateQrInfo(): void {
   const info = $("qr-info");
   const snap = $<HTMLButtonElement>("qr-snap");
   if (!n) {
-    info.textContent = "內容無法編碼成 QR Code";
+    info.textContent = tr("內容無法編碼成 QR Code");
     snap.disabled = true;
     return;
   }
   const per = size / n;
   const mm = (size / DOTS_PER_MM).toFixed(1);
   const integer = Number.isInteger(per);
-  info.textContent = `${n} × ${n} 個模組，每個約 ${per.toFixed(2)} 點，全寬 ${mm} mm。` +
-    (integer ? "✓ 每個模組是整數點，列印最清晰。" : per < 2.5 ? "⚠ 模組太小且不是整數點，建議放大或按「對齊整數模組」。" : "模組寬度會有 ±1 點的差異；要最清晰請按「對齊整數模組」。");
+  info.textContent = tr("{n} × {n} 個模組，每個約 {per} 點，全寬 {mm} mm。", { n, per: per.toFixed(2), mm }) +
+    (integer ? tr("✓ 每個模組是整數點，列印最清晰。") : per < 2.5 ? tr("⚠ 模組太小且不是整數點，建議放大或按「對齊整數模組」。") : tr("模組寬度會有 ±1 點的差異；要最清晰請按「對齊整數模組」。"));
   info.classList.toggle("warn", !integer && per < 2.5);
   snap.disabled = integer;
 }
@@ -387,7 +394,7 @@ function refreshFormatList(force = false): void {
 function scanVariables(): void {
   const names = usedVariables();
   if (names.length === 0) {
-    setStatus("這個標籤還沒有使用任何 {{欄位}}", "err");
+    setStatus(tr("這個標籤還沒有使用任何 {{欄位}}"), "err");
     return;
   }
   const ta = $<HTMLTextAreaElement>("vars");
@@ -396,14 +403,14 @@ function scanVariables(): void {
   for (const name of names) if (!(name in have)) lines.push(`${name}=`);
   ta.value = lines.join("\n");
   ta.dispatchEvent(new Event("input"));
-  setStatus(`已列出 ${names.length} 個欄位：${names.join("、")}。請在「＝」後面填入測試值`, "ok");
+  setStatus(tr("已列出 {n} 個欄位：{names}。請在「＝」後面填入測試值", { n: names.length, names: names.join(tr("、")) }), "ok");
 }
 
 /** 「插入變數」下拉選單：優先列出 Excel 的欄位，其次是範本用過與測試資料中的欄位 */
 function refreshVarSelect(): void {
   const sel = $<HTMLSelectElement>("var-insert");
   const names = [...new Set([...tableHeaders(), ...usedVariables(), ...Object.keys(parseVars($<HTMLTextAreaElement>("vars").value))])];
-  sel.replaceChildren(new Option(names.length ? "插入變數…" : "（尚無可用欄位）", ""), ...names.map((n) => new Option(`{{${n}}}`, n)));
+  sel.replaceChildren(new Option(names.length ? tr("插入變數…") : tr("（尚無可用欄位）"), ""), ...names.map((n) => new Option(`{{${n}}}`, n)));
   sel.value = "";
   sel.disabled = names.length === 0;
 }
@@ -446,10 +453,10 @@ let currentPath: string | null = null;
 let dirty = false;
 
 function updateTplLabel(): void {
-  const name = currentPath ? (currentPath.split(/[\\/]/).pop() ?? currentPath) : "未命名標籤";
+  const name = currentPath ? (currentPath.split(/[\\/]/).pop() ?? currentPath) : tr("未命名標籤");
   const el = $("tpl-name");
   el.textContent = dirty ? `${name} ●` : name;
-  el.title = (currentPath ?? "尚未儲存") + (dirty ? "（有未儲存的變更）" : "");
+  el.title = (currentPath ?? tr("尚未儲存")) + (dirty ? tr("（有未儲存的變更）") : "");
   el.classList.toggle("dirty", dirty);
 }
 
@@ -531,27 +538,27 @@ async function undo(): Promise<void> {
   if (restoring) return;
   recordNow(); // 先把尚未記錄的最後一個動作也算進去
   const prev = undoStack.pop();
-  if (prev === undefined) { setStatus("沒有可以復原的動作", "ok"); return; }
+  if (prev === undefined) { setStatus(tr("沒有可以復原的動作"), "ok"); return; }
   redoStack.push(lastSnap);
   await restoreSnapshot(prev);
-  setStatus("已復原（Ctrl+Y 重做）", "ok");
+  setStatus(tr("已復原（Ctrl+Y 重做）"), "ok");
 }
 
 async function redo(): Promise<void> {
   if (restoring) return;
   recordNow();
   const next = redoStack.pop();
-  if (next === undefined) { setStatus("沒有可以重做的動作", "ok"); return; }
+  if (next === undefined) { setStatus(tr("沒有可以重做的動作"), "ok"); return; }
   undoStack.push(lastSnap);
   await restoreSnapshot(next);
-  setStatus("已重做", "ok");
+  setStatus(tr("已重做"), "ok");
 }
 
 // ---------- 範本存取 ----------
 /** 標籤檔的副檔名（內容是 JSON）。舊版存的 .json 仍然可以開啟。 */
 const LABEL_EXT = "lpxl";
-const OPEN_FILTER = [{ name: "標籤檔（.lpxl、.json）", extensions: [LABEL_EXT, "json"] }];
-const SAVE_FILTER = [{ name: "標籤檔（.lpxl）", extensions: [LABEL_EXT] }];
+const OPEN_FILTER = [{ name: tr("標籤檔（.lpxl、.json）"), extensions: [LABEL_EXT, "json"] }];
+const SAVE_FILTER = [{ name: tr("標籤檔（.lpxl）"), extensions: [LABEL_EXT] }];
 /** 另存新檔的預設檔名：沿用目前的檔名但換成 .lpxl（舊的 .json 另存時就升級為新副檔名） */
 const defaultSavePath = (cur: string | null): string => (cur ? cur.replace(/\.[^.\\/]+$/, "") : "label") + `.${LABEL_EXT}`;
 
@@ -569,7 +576,7 @@ async function saveTemplate(asNew = false): Promise<boolean> {
       const target = defaultSavePath(path);
       // 已經有同名的 .lpxl（例如先前升級過）：先確認，不要默默蓋掉
       if (await invoke<boolean>("path_exists", { path: target })) {
-        const ok = await ask(`已經有「${baseName(target)}」，要用目前的內容覆蓋它嗎？`, { title: "儲存標籤", kind: "warning", okLabel: "覆蓋", cancelLabel: "取消" });
+        const ok = await ask(tr("已經有「{name}」，要用目前的內容覆蓋它嗎？", { name: baseName(target) }), { title: tr("儲存標籤"), kind: "warning", okLabel: tr("覆蓋"), cancelLabel: tr("取消") });
         if (!ok) return false;
       }
       migratedFrom = path;
@@ -586,7 +593,7 @@ async function saveTemplate(asNew = false): Promise<boolean> {
     if (migratedFrom) removeRecent(migratedFrom); // 最近開啟的記錄跟著換成新檔
     pushRecent(path);
     updateTplLabel();
-    setStatus(migratedFrom ? `已儲存為新格式：${path}（原本的 ${baseName(migratedFrom)} 沒有更動）` : `已儲存：${path}`, "ok");
+    setStatus(migratedFrom ? tr("已儲存為新格式：{path}（原本的 {old} 沒有更動）", { path, old: baseName(migratedFrom) }) : tr("已儲存：{path}", { path }), "ok");
     return true;
   } catch (e) {
     setStatus(String(e), "err");
@@ -597,7 +604,7 @@ async function saveTemplate(asNew = false): Promise<boolean> {
 /** 目前的標籤有未儲存的變更時，詢問是否放棄；沒有變更就直接放行 */
 async function confirmDiscard(what: string): Promise<boolean> {
   if (!dirty) return true;
-  return ask(`目前的標籤有尚未儲存的變更，要放棄並${what}嗎？`, { title: "未儲存的變更", kind: "warning", okLabel: `放棄並${what}`, cancelLabel: "取消" });
+  return ask(tr("目前的標籤有尚未儲存的變更，要放棄並{what}嗎？", { what: tr(what) }), { title: tr("未儲存的變更"), kind: "warning", okLabel: tr("放棄並{what}", { what: tr(what) }), cancelLabel: tr("取消") });
 }
 
 /** 讀取並載入指定路徑的標籤檔（開啟舊檔、最近開啟的檔案共用） */
@@ -607,12 +614,12 @@ async function loadLabelFile(path: string): Promise<void> {
     text = await invoke<string>("read_text_file", { path });
   } catch (e) {
     removeRecent(path); // 檔案不見了或無法讀取：從最近記錄移除，避免一直點到壞掉的項目
-    setStatus(`無法開啟「${baseName(path)}」：${String(e)}（已從最近開啟記錄移除）`, "err");
+    setStatus(tr("無法開啟「{name}」：{err}（已從最近開啟記錄移除）", { name: baseName(path), err: String(e) }), "err");
     return;
   }
   try {
     const data = JSON.parse(text);
-    if (data.version !== 1 || !Array.isArray(data.elements)) throw new Error("不是有效的標籤檔");
+    if (data.version !== 1 || !Array.isArray(data.elements)) throw new Error(tr("不是有效的標籤檔"));
     settings.tplWmm = Number(data.tplWmm) || settings.tplWmm;
     settings.tplHmm = Number(data.tplHmm) || settings.tplHmm;
     saveSettings(settings);
@@ -626,35 +633,35 @@ async function loadLabelFile(path: string): Promise<void> {
     dirty = false;
     pushRecent(path);
     updateTplLabel();
-    setStatus(`已開啟標籤：${path}`, "ok");
+    setStatus(tr("已開啟標籤：{path}", { path }), "ok");
   } catch (e) {
-    setStatus(`開啟標籤失敗：${String(e)}`, "err");
+    setStatus(tr("開啟標籤失敗：{err}", { err: String(e) }), "err");
   }
 }
 
 /** 開啟舊檔：選擇檔案 */
 async function openTemplate(): Promise<void> {
   try {
-    if (!(await confirmDiscard("開啟其他標籤"))) return;
+    if (!(await confirmDiscard(N("開啟其他標籤")))) return;
     const path = await open({ filters: OPEN_FILTER, multiple: false });
     if (typeof path !== "string") return;
     await loadLabelFile(path);
   } catch (e) {
-    setStatus(`開啟標籤失敗：${String(e)}`, "err");
+    setStatus(tr("開啟標籤失敗：{err}", { err: String(e) }), "err");
   }
 }
 
 /** 開啟新檔：清空畫布，建立一份空白標籤（尺寸沿用目前設定） */
 async function newLabel(): Promise<void> {
   try {
-    if (!(await confirmDiscard("開啟新檔"))) return;
+    if (!(await confirmDiscard(N("建立新標籤")))) return;
     buildStage();
     refreshLayers();
     resetHistory();
     currentPath = null;
     dirty = false;
     updateTplLabel();
-    setStatus("已開啟新檔", "ok");
+    setStatus(tr("已開啟新檔"), "ok");
   } catch (e) {
     setStatus(String(e), "err");
   }
@@ -663,7 +670,7 @@ async function newLabel(): Promise<void> {
 /** 產生校正標籤（依目前的標籤尺寸）：外框與 mm 刻度，印出來即可判斷位置偏移 */
 async function openCalibration(): Promise<void> {
   try {
-    if (!(await confirmDiscard("改為校正標籤"))) return;
+    if (!(await confirmDiscard(N("改為校正標籤")))) return;
     buildStage();
     for (const d of calibrationElements(settings.tplWmm, settings.tplHmm)) layer.add(await createElement(d));
     transformer.moveToTop();
@@ -672,7 +679,7 @@ async function openCalibration(): Promise<void> {
     currentPath = null;
     dirty = false; // 校正標籤是暫時用的，關閉程式時不必詢問是否儲存
     updateTplLabel();
-    setStatus("已產生校正標籤：請列印一張，從外框與刻度判斷偏移量（見「位置左右／上下」）", "ok");
+    setStatus(tr("已產生校正標籤：請列印一張，從外框與刻度判斷偏移量（見「位置左右／上下」）"), "ok");
   } catch (e) {
     setStatus(String(e), "err");
   }
@@ -681,10 +688,10 @@ async function openCalibration(): Promise<void> {
 /** 最近開啟的檔案：直接開啟，不需要再選檔案 */
 async function openRecent(path: string): Promise<void> {
   try {
-    if (!(await confirmDiscard("開啟其他標籤"))) return;
+    if (!(await confirmDiscard(N("開啟其他標籤")))) return;
     await loadLabelFile(path);
   } catch (e) {
-    setStatus(`開啟標籤失敗：${String(e)}`, "err");
+    setStatus(tr("開啟標籤失敗：{err}", { err: String(e) }), "err");
   }
 }
 
@@ -694,54 +701,76 @@ function fileMenuItems(): MenuItem[] {
   const recent = loadRecent();
   const recentItems: MenuItem[] = recent.length
     ? recent.slice(0, 9).map((p, i) => ({ label: `${i + 1}　${baseName(p)}`, hint: shortDir(p), onClick: () => void openRecent(p) }))
-    : [{ label: "（沒有最近開啟的檔案）", disabled: true }];
+    : [{ label: tr("（沒有最近開啟的檔案）"), disabled: true }];
   return [
-    { label: "開啟新檔", hint: "Ctrl+N", onClick: () => void newLabel() },
-    { label: "開啟舊檔…", hint: "Ctrl+O", onClick: () => void openTemplate() },
+    { label: tr("開啟新檔"), hint: "Ctrl+N", onClick: () => void newLabel() },
+    { label: tr("開啟舊檔…"), hint: "Ctrl+O", onClick: () => void openTemplate() },
     { separator: true },
-    { label: "儲存", hint: "Ctrl+S", onClick: () => void saveTemplate() },
-    { label: "另存新檔…", hint: "Ctrl+Shift+S", onClick: () => void saveTemplate(true) },
+    { label: tr("儲存"), hint: "Ctrl+S", onClick: () => void saveTemplate() },
+    { label: tr("另存新檔…"), hint: "Ctrl+Shift+S", onClick: () => void saveTemplate(true) },
     { separator: true },
     ...recentItems,
-    ...(recent.length ? [{ separator: true } as MenuItem, { label: "清除最近開啟記錄", onClick: () => { clearRecent(); setStatus("已清除最近開啟記錄", "ok"); } }] : []),
+    ...(recent.length ? [{ separator: true } as MenuItem, { label: tr("清除最近開啟記錄"), onClick: () => { clearRecent(); setStatus(tr("已清除最近開啟記錄"), "ok"); } }] : []),
   ];
 }
 
 const insertMenuItems = (): MenuItem[] => [
-  { label: "文字", onClick: () => $("add-text").click() },
+  { label: tr("文字"), onClick: () => $("add-text").click() },
   { label: "QR Code", onClick: () => $("add-qr").click() },
-  { label: "條碼", onClick: () => $("add-barcode").click() },
+  { label: tr("條碼"), onClick: () => $("add-barcode").click() },
   { separator: true },
-  { label: "矩形", onClick: () => $("add-rect").click() },
-  { label: "線條", onClick: () => $("add-line").click() },
-  { label: "圖片…", onClick: () => $("add-image").click() },
+  { label: tr("矩形"), onClick: () => $("add-rect").click() },
+  { label: tr("線條"), onClick: () => $("add-line").click() },
+  { label: tr("圖片…"), onClick: () => $("add-image").click() },
 ];
 
 function editMenuItems(): MenuItem[] {
   const n = selected;
   const locked = !!n?.getAttr("locked");
   return [
-    { label: "復原", hint: "Ctrl+Z", disabled: !canUndo(), onClick: () => void undo() },
-    { label: "重做", hint: "Ctrl+Y", disabled: !canRedo(), onClick: () => void redo() },
+    { label: tr("復原"), hint: "Ctrl+Z", disabled: !canUndo(), onClick: () => void undo() },
+    { label: tr("重做"), hint: "Ctrl+Y", disabled: !canRedo(), onClick: () => void redo() },
     { separator: true },
-    { label: "剪下", hint: "Ctrl+X", disabled: !n || locked, onClick: () => n && cutNode(n) },
-    { label: "複製", hint: "Ctrl+C", disabled: !n, onClick: () => n && copyNode(n) },
-    { label: "貼上", hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() },
-    { label: "重複", hint: "Ctrl+D", disabled: !n || locked, onClick: () => n && void duplicateNode(n) },
+    { label: tr("剪下"), hint: "Ctrl+X", disabled: !n || locked, onClick: () => n && cutNode(n) },
+    { label: tr("複製"), hint: "Ctrl+C", disabled: !n, onClick: () => n && copyNode(n) },
+    { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() },
+    { label: tr("重複"), hint: "Ctrl+D", disabled: !n || locked, onClick: () => n && void duplicateNode(n) },
     { separator: true },
-    { label: "刪除", hint: "Delete", disabled: !n || locked, onClick: () => removeSelected() },
+    { label: tr("刪除"), hint: "Delete", disabled: !n || locked, onClick: () => removeSelected() },
     { separator: true },
-    { label: "屬性…", hint: "Alt+Enter", disabled: !n, onClick: () => n && openProps(n) },
+    { label: tr("屬性…"), hint: "Alt+Enter", disabled: !n, onClick: () => n && openProps(n) },
   ];
 }
 
 const sidePanel = (): HTMLElement => document.querySelector<HTMLElement>("aside.panel")!;
+// 語言名稱一律用該語言自己的寫法，選錯了也找得到回來的路
+const langMenuItems = (): MenuItem[] =>
+  (Object.keys(LANG_NAMES) as Lang[]).map((l) => ({ label: LANG_NAMES[l], hint: l === currentLang() ? "✓" : "", onClick: () => changeLang(l) }));
+const LANG_TAG: Record<Lang, string> = { "zh-TW": "繁", "zh-CN": "简", en: "EN", es: "ES", de: "DE", ja: "日", ko: "한" };
+const updateLangTag = (): void => { const el = document.querySelector("#lang-btn .lang-tag"); if (el) el.textContent = LANG_TAG[currentLang()]; };
+
 const viewMenuItems = (): MenuItem[] => [
-  { label: "預覽列印", hint: "Ctrl+P", onClick: () => void openPreview() },
+  { label: tr("預覽列印"), hint: "Ctrl+P", onClick: () => void openPreview() },
   { separator: true },
-  { label: "對齊線（拖曳時吸附）", hint: guidesEnabled() ? "✓" : "", onClick: () => { setGuidesEnabled(!guidesEnabled()); setStatus(guidesEnabled() ? "對齊線：開（拖曳時靠近邊緣或其他物件會吸附；按住 Alt 可暫時不吸附）" : "對齊線：關", "ok"); } },
-  { label: "側邊面板", hint: sidePanel().hidden ? "" : "✓", onClick: () => { sidePanel().hidden = !sidePanel().hidden; window.dispatchEvent(new Event("resize")); } },
+  { label: tr("對齊線（拖曳時吸附）"), hint: guidesEnabled() ? "✓" : "", onClick: () => { setGuidesEnabled(!guidesEnabled()); setStatus(guidesEnabled() ? tr("對齊線：開（拖曳時靠近邊緣或其他物件會吸附；按住 Alt 可暫時不吸附）") : tr("對齊線：關"), "ok"); } },
+  { label: tr("側邊面板"), hint: sidePanel().hidden ? "" : "✓", onClick: () => { sidePanel().hidden = !sidePanel().hidden; window.dispatchEvent(new Event("resize")); } },
 ];
+
+/** 切換介面語言：立即套用到靜態文字，並重畫目前看得到的動態文字；選擇會記住 */
+function changeLang(l: Lang): void {
+  if (l === currentLang()) return;
+  setLang(l);
+  saveLang(l);
+  updateLangTag();
+  applyDom();
+  updateStageCaption();
+  updateTplLabel();
+  refreshLayers();
+  refreshVarSelect();
+  syncPanel();
+  syncHistoryButtons();
+  window.dispatchEvent(new Event("langchange")); // 外觀按鈕等自己監聽
+}
 
 /** 工具選單裡的設定視窗（內容原本是側邊欄的卡片，欄位 id 與事件都沒變） */
 function openSettings(id: string): void {
@@ -754,19 +783,22 @@ for (const b of document.querySelectorAll<HTMLElement>("[data-dlg-close]")) {
 
 function toolsMenuItems(): MenuItem[] {
   return [
-    { label: "變數測試資料…", onClick: () => openSettings("dlg-vars") },
-    { label: "紙張與標籤尺寸…", onClick: () => openSettings("dlg-paper") },
-    { label: "列印品質與出紙…", onClick: () => openSettings("dlg-quality") },
-    { label: "印表機…", onClick: () => openSettings("dlg-printer") },
+    { label: tr("變數測試資料…"), onClick: () => openSettings("dlg-vars") },
+    { label: tr("紙張與標籤尺寸…"), onClick: () => openSettings("dlg-paper") },
+    { label: tr("列印品質與出紙…"), onClick: () => openSettings("dlg-quality") },
+    { label: tr("印表機…"), onClick: () => openSettings("dlg-printer") },
     { separator: true },
-    { label: "產生校正標籤", onClick: () => void openCalibration() },
-    { label: "重新讀取資料來源", disabled: $("data-panel").hidden, onClick: () => $("data-reload").click() },
+    { label: tr("產生校正標籤"), onClick: () => void openCalibration() },
+    { label: tr("重新讀取資料來源"), disabled: $("data-panel").hidden, onClick: () => $("data-reload").click() },
   ];
 }
 
 const helpMenuItems = (): MenuItem[] => [
-  { label: "關於 Label Printer", onClick: () => void showAbout() },
-  { label: "第三方授權聲明", onClick: () => showLicenses() },
+  { label: tr("關於 Label Printer"), onClick: () => void showAbout() },
+  { label: tr("第三方授權聲明"), onClick: () => showLicenses() },
+  { separator: true },
+  { label: tr("檢查新版本"), onClick: () => void checkForUpdate() },
+  { label: tr("新功能"), onClick: () => void showWhatsNew() },
 ];
 
 // ---------- 渲染 & 列印 ----------
@@ -822,7 +854,7 @@ function renderBitmap(row: Row, natives?: NativeCode[]) {
 /** 預覽列印資訊列：有物件啟用原生指令時提醒「預覽是點陣近似」 */
 function nativeNote(): string {
   const n = elements().filter((e) => (kindOf(e) === "qr" || kindOf(e) === "barcode") && e.getAttr("native")).length;
-  return n ? `有 ${n} 個條碼／QR 使用印表機原生指令（預覽以點陣近似顯示）　` : "";
+  return n ? tr("有 {n} 個條碼／QR 使用印表機原生指令（預覽以點陣近似顯示）　", { n }) : "";
 }
 
 function setStatus(msg: string, kind: "ok" | "err" | "" = ""): void {
@@ -890,7 +922,7 @@ async function previewBitmap(row: Row = currentRow(), raw?: RawRow): Promise<voi
     monoToCanvas(renderBitmap(resolved), $<HTMLCanvasElement>("preview"));
     $<HTMLCanvasElement>("preview").hidden = false;
     const n = Object.keys(row).length;
-    setStatus(n ? `預覽已套用 ${n} 個變數` : "預覽（目前沒有變數資料，{{欄位}} 會原樣顯示）", "ok");
+    setStatus(n ? tr("預覽已套用 {n} 個變數", { n }) : tr("預覽（目前沒有變數資料，{{欄位}} 會原樣顯示）"), "ok");
   } catch (e) {
     setStatus(String(e), "err");
   }
@@ -938,7 +970,7 @@ async function printRows(rows: Row[], raws: RawRow[] = []): Promise<void> {
     const jobs = (await resolveFormats(rows, raws)).map(makeJob);
     await invoke("print_labels", { target, jobs });
     const per = jobs[0]?.copies ?? 1;
-    setStatus(`已送出列印：${rows.length} 筆資料 × ${per} 張 = ${rows.length * per} 張`, "ok");
+    setStatus(tr("已送出列印：{rows} 筆資料 × {per} 張 = {total} 張", { rows: rows.length, per, total: rows.length * per }), "ok");
   } catch (e) {
     setStatus(String(e), "err");
   }
@@ -950,7 +982,7 @@ const print = () => printRows([currentRow()]);
 function insertVariable(name: string): void {
   const k = kindOf(selected);
   if (!selected || !(k === "text" || k === "qr" || k === "barcode")) {
-    setStatus("請先選取畫布上的文字、QR Code 或條碼物件，再點欄位名稱", "err");
+    setStatus(tr("請先選取畫布上的文字、QR Code 或條碼物件，再點欄位名稱"), "err");
     return;
   }
   const ta = $<HTMLTextAreaElement>("prop-text");
@@ -982,7 +1014,7 @@ function bindQuality(): void {
     $("q-density-val").textContent = String(settings.density);
     speed.value = String(settings.speed);
     bold.value = String(settings.boldness);
-    $("q-bold-val").textContent = settings.boldness === 0 ? "標準" : `+${settings.boldness}`;
+    $("q-bold-val").textContent = settings.boldness === 0 ? tr("標準") : `+${settings.boldness}`;
     tear.checked = settings.tear;
     off.value = String(settings.feedOffsetMm);
     sx.value = String(settings.shiftXmm);
@@ -1067,7 +1099,7 @@ async function loadPrinters(): Promise<void> {
       saveSettings(settings);
     }
   } catch (e) {
-    setStatus(`無法取得印表機清單：${String(e)}`, "err");
+    setStatus(tr("無法取得印表機清單：{err}", { err: String(e) }), "err");
   }
 }
 
@@ -1132,8 +1164,8 @@ initPreview({
   source: () => {
     const sel = selectedRows();
     return sel
-      ? { ...sel, from: "勾選的資料列" }
-      : { rows: [currentRow()], raws: [], names: ["變數測試資料"], from: "使用「變數測試資料」（單張）" };
+      ? { ...sel, from: tr("勾選的資料列") }
+      : { rows: [currentRow()], raws: [], names: [tr("變數測試資料")], from: tr("使用「變數測試資料」（單張）") };
   },
   render: async (row, raw) => {
     const [resolved] = await resolveFormats([row], raw ? [raw] : []);
@@ -1141,15 +1173,15 @@ initPreview({
     return { bmp, ...placement(bmp) };
   },
   info: () => {
-    const printer = settings.printerMode === "windows" ? settings.printerName || "（尚未選擇印表機）" : `${settings.host}:${settings.port}`;
-    const bold = settings.boldness === 0 ? "標準" : `+${settings.boldness}`;
-    const feed = settings.feedOffsetMm ? `　額外送紙 ${settings.feedOffsetMm} mm` : "";
+    const printer = settings.printerMode === "windows" ? settings.printerName || tr("（尚未選擇印表機）") : `${settings.host}:${settings.port}`;
+    const bold = settings.boldness === 0 ? tr("標準") : `+${settings.boldness}`;
+    const feed = settings.feedOffsetMm ? tr("　額外送紙 {mm} mm", { mm: settings.feedOffsetMm }) : "";
     return {
       paperW: mmToDots(settings.paperWmm), paperH: mmToDots(settings.paperHmm),
       paperWmm: settings.paperWmm, paperHmm: settings.paperHmm, tplWmm: settings.tplWmm, tplHmm: settings.tplHmm,
       gapMm: settings.gapMm, gapDots: mmToDots(settings.gapMm),
       copies: Math.max(1, Number($<HTMLInputElement>("copies").value) || 1),
-      summary: `${nativeNote()}印表機：${printer}　濃度 ${settings.density}　速度 ${settings.speed}　字體加粗 ${bold}　撕紙位置 ${settings.tear ? "開" : "關"}${feed}`,
+      summary: `${nativeNote()}${tr("印表機：{printer}　濃度 {density}　速度 {speed}　字體加粗 {bold}　撕紙位置 {tear}", { printer, density: settings.density, speed: settings.speed, bold, tear: settings.tear ? tr("開") : tr("關") })}${feed}`,
     };
   },
   print: (rows, raws) => printRows(rows, raws),
@@ -1198,6 +1230,7 @@ const BAR: Array<{ id: string; key: string; items: () => MenuItem[] }> = [
   { id: "menu-view", key: "v", items: viewMenuItems },
   { id: "menu-tools", key: "t", items: toolsMenuItems },
   { id: "help-menu", key: "h", items: helpMenuItems },
+  { id: "lang-btn", key: "", items: langMenuItems },
 ];
 let barOpen: string | null = null;
 const clearBar = (): void => { barOpen = null; document.querySelectorAll(".mb.on").forEach((b) => b.classList.remove("on")); };
@@ -1228,12 +1261,15 @@ for (const def of BAR) {
 // Alt+字母開啟功能表（Alt+F／I／E／V／T／H）
 window.addEventListener("keydown", (e) => {
   if (!e.altKey || e.ctrlKey || e.metaKey || document.querySelector("dialog[open]")) return;
-  const def = BAR.find((b) => b.key === e.key.toLowerCase());
+  const def = BAR.find((b) => b.key && b.key === e.key.toLowerCase());
   if (!def) return;
   e.preventDefault();
   openBar(def.id);
 });
 initTheme($("theme-btn"));
+updateLangTag();
+void maybeShowWhatsNew();
+applyDom(); // 靜態的 index.html 文字換成目前語言（繁體中文時不會有任何變動）
 $("undo-btn").addEventListener("click", () => void undo());
 $("redo-btn").addEventListener("click", () => void redo());
 syncHistoryButtons();
@@ -1284,6 +1320,7 @@ window.addEventListener("keydown", (e) => {
 // 僅開發模式：提供自動化測試（scripts/ui-shot.mjs 之類）讀取縮放控制點與物件狀態。打包後的程式不含這段。
 if (import.meta.env.DEV) {
   (window as unknown as Record<string, unknown>).__lp = {
+    i18n: { LOCALES, setLang, applyDom, t: tr, changeLang, detectLang },
     anchor: (name: string) => transformer.findOne(`.${name}`)?.getAbsolutePosition(),
     node: () =>
       selected
@@ -1348,7 +1385,7 @@ try {
     if (closing) return; // 已有一個詢問視窗開著
     closing = true;
     try {
-      const c = await askClose("目前的標籤有尚未儲存的變更，關閉前要先儲存嗎？");
+      const c = await askClose(tr("目前的標籤有尚未儲存的變更，關閉前要先儲存嗎？"));
       if (c === "discard") await win.destroy();
       else if (c === "save" && (await saveTemplate())) await win.destroy(); // 儲存失敗或取消選檔時留在程式裡
     } finally {

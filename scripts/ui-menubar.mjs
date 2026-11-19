@@ -17,8 +17,8 @@ const count = () => ev("window.__lp.count()");
 const alt = (k) => ev(`window.dispatchEvent(new KeyboardEvent('keydown', { key: '${k}', altKey: true, bubbles: true, cancelable: true }))`).then(() => sleep(250));
 
 // 版面
-check("功能表列有 6 個項目", (await ev("document.querySelectorAll('#menubar .mb:not(.theme-btn)').length")) === 6);
-check("功能表文字含快捷字母", (await ev("[...document.querySelectorAll('#menubar .mb:not(.theme-btn)')].map(b => b.textContent).join(' ')")) === "檔案(F) 插入(I) 編輯(E) 檢視(V) 工具(T) 說明(H)");
+check("功能表列有 6 個項目", (await ev("document.querySelectorAll('#menubar .mb:not(.theme-btn):not(.lang-btn)').length")) === 6);
+check("功能表文字含快捷字母", (await ev("[...document.querySelectorAll('#menubar .mb:not(.theme-btn):not(.lang-btn)')].map(b => b.textContent).join(' ')")) === "檔案(F) 插入(I) 編輯(E) 檢視(V) 工具(T) 說明(H)");
 check("工具列仍有選擇資料來源、新增圖示、上一步、取消上一步、刪除、預覽列印、列印", await ev(["import-table", "add-text", "add-qr", "add-barcode", "add-rect", "add-line", "add-image", "undo-btn", "redo-btn", "delete", "preview-print", "print"].map((i) => `!!${$(i)}`).join(" && ")));
 check("工具列只有一列（高度小於 60 px）", (await ev("document.querySelector('.toolbar').getBoundingClientRect().height")) < 60);
 check("一開始上一步／取消上一步都是停用", (await ev(`${$("undo-btn")}.disabled && ${$("redo-btn")}.disabled`)));

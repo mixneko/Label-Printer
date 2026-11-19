@@ -152,11 +152,12 @@ label.check { display: flex; align-items: center; gap: 6px; margin-top: 22px; co
 .divider { width: 1px; align-self: stretch; margin: 3px 6px; background: var(--border); }
 .spacer { flex: 1; }
 .tpl-name {
-  max-width: 190px; padding: 3px 9px; font-size: 12px; color: var(--muted);
+  max-width: 190px; flex: 0 1 auto; min-width: 48px; padding: 3px 9px; font-size: 12px; color: var(--muted);
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .tpl-name.dirty { color: var(--warn); background: var(--warn-soft); border-color: var(--warn); font-weight: 600; }
+#print { flex: none; }
 .copies { white-space: nowrap; display: flex; align-items: center; gap: 6px; margin: 0 4px 0 0; font-size: 12.5px; color: var(--muted); }
 .copies input { width: 56px; margin: 0; padding: 4px 6px; text-align: center; }
 
@@ -170,6 +171,11 @@ label.check { display: flex; align-items: center; gap: 6px; margin-top: 22px; co
 .toolbar { padding-top: 6px; padding-bottom: 6px; }
 @media (max-width: 1200px) {
   #undo-btn .lbl, #redo-btn .lbl, #delete .lbl, #preview-print .lbl { display: none; }
+}
+/* 西文／德文的按鈕文字較長：寬度不到 1500 px 就先收成只剩圖示（中文、英文在 1200／1240 px 才收） */
+@media (max-width: 1500px) {
+  :lang(es) #undo-btn .lbl, :lang(es) #redo-btn .lbl, :lang(es) #delete .lbl, :lang(es) #preview-print .lbl, :lang(es) #import-table .lbl, :lang(es) .group-title,
+  :lang(de) #undo-btn .lbl, :lang(de) #redo-btn .lbl, :lang(de) #delete .lbl, :lang(de) #preview-print .lbl, :lang(de) #import-table .lbl, :lang(de) .group-title { display: none; }
 }
 @media (max-width: 1240px) {
   .group-title, #import-table .lbl { display: none; }
@@ -221,8 +227,8 @@ label.check { display: flex; align-items: center; gap: 6px; margin-top: 22px; co
 .settings-dlg label.inline-check, .panel label.inline-check { margin: 6px 0 10px; }
 #qr-info { margin: -2px 0 8px; line-height: 1.5; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.layer-tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
-.layer-tools .btn { padding: 0 4px; }
+.layer-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.layer-tools .btn { padding: 0 6px; flex: 1 1 auto; }
 
 /* 圖層清單 */
 .layer-list { list-style: none; margin: 0; padding: 2px; max-height: 230px; overflow: auto; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; }
@@ -260,7 +266,7 @@ details.help code { padding: 0 4px; background: color-mix(in srgb, var(--help-bo
 .data-bar strong { font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .count { padding: 2px 9px; font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; }
 .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 7px 14px; border-bottom: 1px solid var(--border); }
-.chips::before { content: "點欄位可插入到選取的物件："; font-size: 12px; color: var(--muted); margin-right: 2px; }
+.chips::before { content: attr(data-hint); font-size: 12px; color: var(--muted); margin-right: 2px; }
 .chip {
   padding: 2px 10px; font: 12px Consolas, "Cascadia Mono", monospace; color: var(--accent);
   background: var(--accent-soft); border: 1px solid transparent; border-radius: 999px; cursor: pointer;
@@ -371,7 +377,7 @@ details.help code { padding: 0 4px; background: color-mix(in srgb, var(--help-bo
 .status { color: var(--muted); }
 .status.ok { color: var(--ok); }
 .status.err { color: var(--danger); font-weight: 500; }
-.status:empty::before { content: "就緒"; color: var(--muted); }
+.status:empty::before { content: attr(data-ready); color: var(--muted); }
 
 /* ===== 關閉程式前的確認 ===== */
 .dialog.close-dlg { width: min(520px, calc(100vw - 32px)); }
@@ -392,8 +398,16 @@ details.help code { padding: 0 4px; background: color-mix(in srgb, var(--help-bo
 
 /* ===== 外觀切換（燈泡按鈕） ===== */
 .menubar .spacer { flex: 1; }
+.lang-btn { display: inline-flex; align-items: center; gap: 4px; }
+.lang-btn .ic { width: 15px; height: 15px; }
+.lang-btn .lang-tag { min-width: 1.4em; font-size: 11.5px; font-weight: 700; text-align: center; color: var(--muted); }
 .theme-btn { display: inline-flex; align-items: center; gap: 4px; }
 .theme-btn .ic { width: 15px; height: 15px; }
 .theme-btn .theme-tag { min-width: 1.1em; font-size: 11.5px; font-weight: 700; text-align: center; color: var(--muted); }
 .theme-btn[data-theme="light"] .ic { fill: #f5c518; stroke: #b8860b; }
 .theme-btn[data-theme="dark"] .ic { opacity: .75; }
+
+.whatsnew { max-height: min(60vh, 420px); overflow: auto; }
+.whatsnew h3 { margin: 12px 0 4px; font-size: 13px; }
+.whatsnew h3:first-child { margin-top: 0; }
+.whatsnew ul { margin: 0; padding-left: 20px; line-height: 1.6; font-size: 13px; }

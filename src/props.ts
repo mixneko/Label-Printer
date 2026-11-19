@@ -5,6 +5,7 @@ import { ALIGN_LABEL, alignTo, bbox, localSize, moveBBoxTo, type Align } from ".
 import { fitText, isBounded, kindOf, ratioLockOf, refreshCode } from "./elements";
 import { displayName } from "./layers";
 import { DOTS_PER_MM } from "./settings";
+import { t } from "./i18n";
 
 export interface PropsApi {
   layer(): Konva.Layer;
@@ -29,10 +30,10 @@ function sizeMode(n: Konva.Shape): { w: boolean; h: boolean; hint: string } {
   switch (kindOf(n)) {
     case "text":
       return isBounded(n)
-        ? { w: true, h: true, hint: "這是文字的「最大範圍」。內容太長時，字級會自動縮小到放得進這個範圍（可在右側調整最小字級與對齊）。" }
-        : { w: false, h: false, hint: "文字的大小由「字級」決定，請在右側「選取物件」面板調整字級；想把文字限制在固定範圍內，請勾選「限制在固定範圍內」。" };
-    case "barcode": return { w: false, h: true, hint: "條碼的寬度會依內容（變數）自動調整，不能手動拉寬；這裡可以調整條碼的高度。內容變長時要往哪邊長，請在右側「展開方向」設定。" };
-    case "qr": return { w: true, h: true, hint: "QR Code 一定是正方形，寬高會一起變化。" };
+        ? { w: true, h: true, hint: t("這是文字的「最大範圍」。內容太長時，字級會自動縮小到放得進這個範圍（可在右側調整最小字級與對齊）。") }
+        : { w: false, h: false, hint: t("文字的大小由「字級」決定，請在右側「選取物件」面板調整字級；想把文字限制在固定範圍內，請勾選「限制在固定範圍內」。") };
+    case "barcode": return { w: false, h: true, hint: t("條碼的寬度會依內容（變數）自動調整，不能手動拉寬；這裡可以調整條碼的高度。內容變長時要往哪邊長，請在右側「展開方向」設定。") };
+    case "qr": return { w: true, h: true, hint: t("QR Code 一定是正方形，寬高會一起變化。") };
     default: return { w: true, h: true, hint: "" };
   }
 }
@@ -46,7 +47,7 @@ function fill(): void {
   const sizeLocked = !!n.getAttr("sizeLocked");
   const mode = sizeMode(n);
 
-  $("pp-title").textContent = `屬性 — ${displayName(n)}`;
+  $("pp-title").textContent = t("屬性 — {name}", { name: displayName(n) });
   $<HTMLInputElement>("pp-name").value = (n.getAttr("label") as string | undefined) ?? "";
   $<HTMLInputElement>("pp-name").placeholder = displayName(n);
   $<HTMLInputElement>("pp-x").value = String(toMm(r.x));
@@ -63,8 +64,8 @@ function fill(): void {
   $<HTMLInputElement>("pp-hidden").checked = !n.visible();
   $("pp-hint").textContent = mode.hint;
   $("pp-hint").hidden = !mode.hint;
-  const dpi = `（1 點 = ${(1 / DOTS_PER_MM).toFixed(3)} mm）`;
-  $("pp-grid-hint").textContent = `位置與大小的單位是 mm ${dpi}；實際列印會對齊到 1 點。`;
+  const dpi = t("（1 點 = {mm} mm）", { mm: (1 / DOTS_PER_MM).toFixed(3) });
+  $("pp-grid-hint").textContent = t("位置與大小的單位是 mm {dpi}；實際列印會對齊到 1 點。", { dpi });
 }
 
 function applied(): void {
@@ -202,7 +203,7 @@ export function initProps(a: PropsApi): void {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "btn sm";
-    b.textContent = ALIGN_LABEL[how];
+    b.textContent = t(ALIGN_LABEL[how]);
     b.addEventListener("click", () => align(how));
     alignBox.append(b);
   }

@@ -1,6 +1,7 @@
 /** 「說明」選單的兩個對話框：關於、第三方授權聲明（授權文字由 scripts/gen-licenses.mjs 產生，打包進程式）。 */
 import { getVersion } from "@tauri-apps/api/app";
 import licenseText from "./licenses.txt?raw";
+import { t } from "./i18n";
 
 function open(id: string): void {
   const dlg = document.getElementById(id) as HTMLDialogElement;
@@ -10,7 +11,7 @@ function open(id: string): void {
 export async function showAbout(): Promise<void> {
   let v = "";
   try { v = await getVersion(); } catch { /* 非 Tauri 環境（瀏覽器測試）沒有版本資訊 */ }
-  document.getElementById("about-ver")!.textContent = v ? `版本 ${v}` : "";
+  document.getElementById("about-ver")!.textContent = v ? t("版本 {v}", { v }) : "";
   open("about-dialog");
 }
 

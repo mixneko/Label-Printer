@@ -1,5 +1,7 @@
 # Label Printer
 
+**繁體中文** · [English](README.en.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
+
 取代 BarTender Designer 的輕量標籤排版與列印軟體。目標印表機：TSC TTP-244 Pro（203 dpi，TSPL2），經由 print server 以 Raw TCP 直接列印。
 
 技術：Tauri 2（Rust 後端）+ TypeScript + Konva.js（畫布編輯器）。
@@ -50,6 +52,8 @@ npm run tauri build
 - [x] 本機 Excel / CSV 資料來源（工具列「選擇資料來源」）、批次列印、預覽（第一列為欄位標題，每一列是一筆資料；在表格中勾選哪幾列就印幾張，標籤上的 `{{欄位}}` 取自該列。Excel 不需要「份數」欄；支援 .xlsx/.xlsm/.xls 與 .csv，CSV 自動判斷 UTF-8 / Big5 與分隔符號）
 - [x] 列印校正：濃度、速度、字體加粗、撕紙位置、額外送紙、位置左右/上下微調，以及「工具 → 產生校正標籤」（外框與 mm 刻度）
 - [x] 原生條碼指令（`BARCODE` / `QRCODE`）：選用（預設關閉），在條碼或 QR 的屬性勾選「使用印表機原生指令列印」；內容含中文、旋轉時自動改用點陣
+- [ ] 應用程式信任：程式碼簽章（Authenticode），降低 Windows SmartScreen 與防毒軟體的警告
+- [x] 多國語系：介面支援英文、西班牙文、德文、日文、韓文、簡體中文、繁體中文（第一次啟動依系統語言選擇，可由功能表列右上角的地球按鈕切換；說明文件 README 也有七種語言版本；翻譯尚待母語者審閱）
 
 > 注意：TSPL `BITMAP` 的黑白位元定義（0 = 列印）已在程式中反相處理，需以實機確認列印結果。
 

@@ -5,6 +5,7 @@ import Konva from "konva";
 import JsBarcode from "jsbarcode";
 import QRCode from "qrcode";
 import { PLACEHOLDER, substitute, type Row } from "./template";
+import { t as tr } from "./i18n";
 
 export type Kind = "text" | "rect" | "qr" | "barcode" | "image";
 
@@ -190,7 +191,7 @@ export function defaults(kind: Kind | "line"): ElementData {
   const base = { x: 20, y: 20, rotation: 0, scaleX: 1, scaleY: 1 };
   switch (kind) {
     case "text":
-      return { ...base, kind: "text", content: "文字 {{欄位}}", fontFamily: DEFAULT_FONT, fontSize: 32, bold: false };
+      return { ...base, kind: "text", content: tr("文字 {{欄位}}"), fontFamily: DEFAULT_FONT, fontSize: 32, bold: false };
     case "rect":
       return { ...base, kind: "rect", width: 200, height: 100, filled: false, strokeWidth: 3 };
     case "line":
@@ -263,7 +264,7 @@ export function qrCanvas(text: string, size: number, ecLevel: string): HTMLCanva
     }
     return c;
   } catch {
-    return errorCanvas("QR 內容無法編碼");
+    return errorCanvas(tr("QR 內容無法編碼"));
   }
 }
 
@@ -286,7 +287,7 @@ export function barcodeCanvas(
     });
     return c;
   } catch {
-    return errorCanvas("條碼內容無效");
+    return errorCanvas(tr("條碼內容無效"));
   }
 }
 

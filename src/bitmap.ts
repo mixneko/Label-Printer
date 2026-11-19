@@ -1,5 +1,6 @@
 // 將 Canvas 轉成 1-bit 點陣資料（每列打包成 byte，高位元在前，1 = 黑點）。
 // 與 Rust 端 tspl.rs 約定：bitmap 長度 = ceil(width/8) * height。
+import { t } from "./i18n";
 
 export interface PackedBitmap {
   width: number;
@@ -21,7 +22,7 @@ export function monoToCanvas(bmp: PackedBitmap, target: HTMLCanvasElement): void
   target.width = bmp.width;
   target.height = bmp.height;
   const ctx = target.getContext("2d");
-  if (!ctx) throw new Error("無法取得 canvas context");
+  if (!ctx) throw new Error(t("無法取得 canvas context"));
   const img = ctx.createImageData(bmp.width, bmp.height);
   const widthBytes = Math.ceil(bmp.width / 8);
   for (let y = 0; y < bmp.height; y++) {
@@ -38,7 +39,7 @@ export function monoToCanvas(bmp: PackedBitmap, target: HTMLCanvasElement): void
 export function canvasToMono(canvas: HTMLCanvasElement, threshold = 128): PackedBitmap {
   const { width, height } = canvas;
   const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("無法取得 canvas context");
+  if (!ctx) throw new Error(t("無法取得 canvas context"));
   const px = ctx.getImageData(0, 0, width, height).data;
   const widthBytes = Math.ceil(width / 8);
   const data = new Uint8Array(widthBytes * height);

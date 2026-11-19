@@ -2,16 +2,17 @@
 // 座標單位一律是 dots（8 dots = 1 mm）。
 
 import Konva from "konva";
+import { N } from "./i18n";
 
 export type Align = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
 
 export const ALIGN_LABEL: Record<Align, string> = {
-  left: "靠左",
-  hcenter: "水平置中",
-  right: "靠右",
-  top: "靠上",
-  vcenter: "垂直置中",
-  bottom: "靠下",
+  left: N("靠左"),
+  hcenter: N("水平置中"),
+  right: N("靠右"),
+  top: N("靠上"),
+  vcenter: N("垂直置中"),
+  bottom: N("靠下"),
 };
 
 /** 物件在標籤座標系中的外框（已考慮旋轉；不含線條粗細，與畫面上看到的內容範圍一致） */

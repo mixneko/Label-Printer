@@ -1826,7 +1826,7 @@ dependencies = [
 
 [[package]]
 name = "label-printer"
-version = "0.8.7"
+version = "0.9.3"
 dependencies = [
  "base64 0.23.1",
  "calamine",

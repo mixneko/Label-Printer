@@ -3,6 +3,7 @@
 // 不使用瀏覽器原生的 <datalist>：它只會列出「符合目前文字」的項目，欄位已經有字型時，
 // 清單裡只剩一項；先前為了列出全部而「點進去就清空文字」，使用者會以為字型被刪掉了。
 // 這裡自己做下拉：點進去保留原字型（文字全選，直接輸入即取代）並展開完整清單，目前的字型會標示。
+import { t } from "./i18n";
 
 export interface FontComboOptions {
   /** 所有已安裝字型 */
@@ -66,7 +67,7 @@ export function initFontCombo(o: FontComboOptions): void {
     if (shown.length === 0) {
       const none = document.createElement("li");
       none.className = "none";
-      none.textContent = "沒有符合的字型";
+      none.textContent = t("沒有符合的字型");
       list.replaceChildren(none);
     } else {
       list.replaceChildren(

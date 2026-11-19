@@ -70,6 +70,35 @@ fn startup_file() -> Option<String> {
     pick_startup_file(std::env::args().skip(1))
 }
 
+/// 用預設瀏覽器開啟「檢查新版本」找到的下載頁面。只允許本專案的 GitHub 網址，避免被拿去開任意連結。
+const OPEN_URL_PREFIX: &str = "https://github.com/mixneko/Label-Printer";
+
+fn url_allowed(url: &str) -> bool {
+    url.starts_with(OPEN_URL_PREFIX)
+        && matches!(url.as_bytes().get(OPEN_URL_PREFIX.len()), None | Some(b'/') | Some(b'?') | Some(b'#'))
+        && url.chars().all(|c| c.is_ascii_graphic())
+}
+
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    if !url_allowed(&url) {
+        return Err("不允許的網址".into());
+    }
+    #[cfg(windows)]
+    {
+        // 不經 shell：參數原樣交給 rundll32
+        std::process::Command::new("rundll32")
+            .args(["url.dll,FileProtocolHandler", &url])
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    }
+    #[cfg(not(windows))]
+    {
+        Err("此平台不支援".into())
+    }
+}
+
 /// 檔案是否已存在（儲存時避免默默覆蓋同名檔案）。
 #[tauri::command]
 fn path_exists(path: String) -> bool {
@@ -94,6 +123,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             print_labels,
+            open_url,
             list_printers,
             list_fonts,
             read_table,
@@ -109,7 +139,18 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::pick_startup_file;
+    use super::{pick_startup_file, url_allowed};
+
+    #[test]
+    fn open_url_only_allows_the_project_repo() {
+        assert!(url_allowed("https://github.com/mixneko/Label-Printer"));
+        assert!(url_allowed("https://github.com/mixneko/Label-Printer/releases/tag/v0.9.3"));
+        assert!(!url_allowed("https://github.com/mixneko/Label-Printer-evil/x"));
+        assert!(!url_allowed("https://evil.example/https://github.com/mixneko/Label-Printer"));
+        assert!(!url_allowed("http://github.com/mixneko/Label-Printer"));
+        assert!(!url_allowed("https://github.com/mixneko/Label-Printer/a b"));
+        assert!(!url_allowed("file:///C:/Windows/System32/calc.exe"));
+    }
 
     #[test]
     fn picks_the_first_existing_label_file_argument() {

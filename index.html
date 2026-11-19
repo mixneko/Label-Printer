@@ -39,6 +39,7 @@
         <symbol id="i-bottom" viewBox="0 0 24 24"><path d="M12 17V3M6 11l6 6 6-6M19 21H5"/></symbol>
         <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"/><path d="M12 17h.01"/></symbol>
         <symbol id="i-eye-sm" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/></symbol>
       <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
         <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
         <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
@@ -53,6 +54,7 @@
       <button id="menu-tools" class="mb" title="工具 (Alt+T)：產生校正標籤、列印品質設定" aria-haspopup="menu">工具<u>(T)</u></button>
       <button id="help-menu" class="mb" title="說明 (Alt+H)：關於、第三方授權聲明" aria-haspopup="menu">說明<u>(H)</u></button>
       <span class="spacer"></span>
+      <button id="lang-btn" class="mb lang-btn" type="button" title="語言 / Language" aria-haspopup="menu"><svg class="ic"><use href="#i-globe" /></svg><span class="lang-tag"></span></button>
       <button id="theme-btn" class="mb theme-btn" type="button"><svg class="ic"><use href="#i-bulb" /></svg><span class="theme-tag">A</span></button>
     </nav>
 
@@ -244,7 +246,7 @@
         <button id="data-print" type="button" class="btn primary" disabled><svg class="ic"><use href="#i-printer" /></svg>列印勾選的列</button>
         <button id="data-close" type="button" class="btn icon" title="關閉資料表"><svg class="ic"><use href="#i-x" /></svg></button>
       </div>
-      <div id="data-chips" class="chips"></div>
+      <div id="data-chips" class="chips" data-hint="點欄位可插入到選取的物件："></div>
       <div class="data-scroll"><table id="data-table"></table></div>
     </section>
 
@@ -310,12 +312,12 @@
       <div class="dlg-body">
             <details class="help">
               <summary>變數怎麼用？（點開看說明）</summary>
-              <p><b>變數就是「先空著、印的時候才填」的位置。</b>標籤上固定不變的字直接打；每張會不一樣的內容（例如序號）就寫成 <code>{{序號}}</code>。</p>
+              <p data-i18n-html><b>變數就是「先空著、印的時候才填」的位置。</b>標籤上固定不變的字直接打；每張會不一樣的內容（例如序號）就寫成 <code>{{序號}}</code>。</p>
               <ol>
-                <li>在物件的「內容」打 <code>{{序號}}</code>，或用「要放入資料欄位？」下拉選單挑選。可以混著寫，例如 <code>序號：{{序號}}</code>。</li>
-                <li>大括號裡的名字，要和 Excel <b>第一列的欄位標題</b>一字不差。</li>
-                <li>用「選擇資料來源」載入 Excel 後，勾選的每一列各印一張，<code>{{序號}}</code> 會換成那一列「序號」欄的內容。</li>
-                <li>還沒有 Excel 時，可在下方手動填值測試：先按「從標籤列出欄位」，再在「＝」後面填內容，按「預覽列印結果」就看得到。</li>
+                <li data-i18n-html>在物件的「內容」打 <code>{{序號}}</code>，或用「要放入資料欄位？」下拉選單挑選。可以混著寫，例如 <code>序號：{{序號}}</code>。</li>
+                <li data-i18n-html>大括號裡的名字，要和 Excel <b>第一列的欄位標題</b>一字不差。</li>
+                <li data-i18n-html>用「選擇資料來源」載入 Excel 後，勾選的每一列各印一張，<code>{{序號}}</code> 會換成那一列「序號」欄的內容。</li>
+                <li data-i18n-html>還沒有 Excel 時，可在下方手動填值測試：先按「從標籤列出欄位」，再在「＝」後面填內容，按「預覽列印結果」就看得到。</li>
               </ol>
             </details>
             <label>每行一個「欄位=值」
@@ -420,6 +422,23 @@
         <button id="about-close" type="button" class="btn primary">關閉</button>
       </footer>
     </dialog>
+    <dialog id="update-dialog" class="dialog close-dlg">
+      <header class="dlg-head"><h2>檢查新版本</h2></header>
+      <div class="dlg-body"><p id="update-msg" class="close-msg"></p></div>
+      <footer class="dlg-foot">
+        <span class="spacer"></span>
+        <button id="update-go" type="button" class="btn primary" hidden>前往下載頁面</button>
+        <button id="update-close" type="button" class="btn">關閉</button>
+      </footer>
+    </dialog>
+    <dialog id="whatsnew-dialog" class="dialog close-dlg">
+      <header class="dlg-head"><h2>新功能</h2></header>
+      <div id="whatsnew-body" class="dlg-body whatsnew"></div>
+      <footer class="dlg-foot">
+        <span class="spacer"></span>
+        <button id="whatsnew-close" type="button" class="btn primary">關閉</button>
+      </footer>
+    </dialog>
     <dialog id="lic-dialog" class="dialog lic-dlg">
       <header class="dlg-head"><h2>第三方授權聲明</h2></header>
       <div id="lic-body" class="dlg-body"><pre id="lic-text" class="lic-text"></pre></div>
@@ -480,7 +499,7 @@
       </footer>
     </dialog>
 
-    <footer class="statusbar"><span id="status" class="status"></span></footer>
+    <footer class="statusbar"><span id="status" class="status" data-ready="就緒"></span></footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

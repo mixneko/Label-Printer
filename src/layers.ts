@@ -2,6 +2,7 @@
 
 import Konva from "konva";
 import { kindOf } from "./elements";
+import { t as tr } from "./i18n";
 
 export interface LayerApi {
   /** 由下到上的所有物件 */
@@ -30,17 +31,17 @@ export function displayName(n: Konva.Shape): string {
     return t.length > 14 ? `${t.slice(0, 14)}…` : t;
   };
   switch (kindOf(n)) {
-    case "text": return short((n as Konva.Text).text()) || "（空白文字）";
+    case "text": return short((n as Konva.Text).text()) || tr("（空白文字）");
     case "qr": return `QR　${short(n.getAttr("content"))}`;
-    case "barcode": return `條碼　${short(n.getAttr("content"))}`;
-    case "rect": return n.getAttr("filled") && n.height() * Math.abs(n.scaleY()) <= 8 ? "線條" : "矩形";
-    case "image": return "圖片";
-    default: return "物件";
+    case "barcode": return `${tr("條碼")}　${short(n.getAttr("content"))}`;
+    case "rect": return n.getAttr("filled") && n.height() * Math.abs(n.scaleY()) <= 8 ? tr("線條") : tr("矩形");
+    case "image": return tr("圖片");
+    default: return tr("物件");
   }
 }
 
 function iconOf(n: Konva.Shape): string {
-  if (kindOf(n) === "rect" && displayName(n) === "線條") return "minus";
+  if (kindOf(n) === "rect" && displayName(n) === tr("線條")) return "minus";
   return ICON[kindOf(n) ?? ""] ?? "square";
 }
 
@@ -125,7 +126,7 @@ export function refreshLayers(): void {
       const name = document.createElement("span");
       name.className = "name";
       name.textContent = displayName(n);
-      name.title = "雙擊可改名";
+      name.title = tr("雙擊可改名");
       name.addEventListener("dblclick", (e) => { e.stopPropagation(); startRename(name, n); });
 
       const icon = document.createElement("span");
@@ -133,8 +134,8 @@ export function refreshLayers(): void {
       icon.innerHTML = svg(iconOf(n));
 
       li.append(
-        button(svg(n.visible() ? "eye" : "eye-off"), n.visible() ? "點一下隱藏（隱藏的物件不會被列印）" : "點一下顯示", () => toggleVisible(n), !n.visible()),
-        button(svg(locked ? "lock" : "unlock"), locked ? "已鎖定（無法選取或拖曳），點一下解鎖" : "點一下鎖定，避免誤拖", () => toggleLocked(n), locked),
+        button(svg(n.visible() ? "eye" : "eye-off"), n.visible() ? tr("點一下隱藏（隱藏的物件不會被列印）") : tr("點一下顯示"), () => toggleVisible(n), !n.visible()),
+        button(svg(locked ? "lock" : "unlock"), locked ? tr("已鎖定（無法選取或拖曳），點一下解鎖") : tr("點一下鎖定，避免誤拖"), () => toggleLocked(n), locked),
         icon,
         name,
       );
@@ -149,7 +150,7 @@ export function refreshLayers(): void {
   if (items.length === 0) {
     const li = document.createElement("li");
     li.className = "empty";
-    li.textContent = "尚無物件，請用上方按鈕新增";
+    li.textContent = tr("尚無物件，請用上方按鈕新增");
     list.append(li);
   }
 

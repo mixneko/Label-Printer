@@ -89,11 +89,11 @@ check("新增物件後，檔名出現未儲存標記", (await chip()).includes("
 const before = await count();
 await ev("window.__ask = false; window.__asks = []");
 await openMenu(); await clickItem("開啟新檔");
-check("開啟新檔：有未儲存變更時會詢問", (await ev("window.__asks.length")) === 1 && (await ev("window.__asks[0]")).includes("開啟新檔"), (await ev("window.__asks[0]")) ?? "");
+check("開啟新檔：有未儲存變更時會詢問", (await ev("window.__asks.length")) === 1 && (await ev("window.__asks[0]")).includes("建立新標籤"), (await ev("window.__asks[0]")) ?? "");
 check("按「取消」→ 維持原樣", (await count()) === before && (await chip()).startsWith("A.json"), `count=${await count()}`);
 await ev("window.__ask = true");
 await openMenu(); await clickItem("開啟新檔");
-check("按「放棄並開啟新檔」→ 清空成空白標籤", (await count()) === 0 && (await chip()) === "未命名標籤", `count=${await count()} chip=${await chip()}`);
+check("按「放棄並建立新標籤」→ 清空成空白標籤", (await count()) === 0 && (await chip()) === "未命名標籤", `count=${await count()} chip=${await chip()}`);
 check("新檔沒有未儲存標記", !(await chip()).includes("●"));
 await ev("window.__asks = []");
 await openMenu(); await clickItem("開啟新檔");

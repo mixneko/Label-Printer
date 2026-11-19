@@ -18,9 +18,9 @@ jobs:
     if: github.server_url == 'https://github.com'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -71,7 +71,7 @@ jobs:
           cp "src-tauri/target/release/bundle/nsis/Label Printer_${VER}_x64-setup.exe" "dist-release/Label Printer_${VER}_x64-setup.exe"
           ls -l dist-release
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: label-printer-${{ steps.ver.outputs.version }}
           path: dist-release/*

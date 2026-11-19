@@ -1,0 +1,17 @@
+.tools/
+node_modules/
+dist/
+src-tauri/target/
+*.log
+.DS_Store
+
+# samples/ 採「白名單」：只有下面明確列出的虛構範例會被追蹤。
+# 其他放進 samples/ 的檔案（例如使用者自己的真實標籤與資料）一律自動忽略，不會被提交，也不用在這裡寫出名稱。
+samples/*
+!samples/範例標籤.lpxl
+!samples/範例貨品清單.csv
+!samples/商品清單.xlsx
+!samples/商品清單-big5.csv
+
+# 本機專用的開發筆記，不納入版本庫
+AGENTS.md

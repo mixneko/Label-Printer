@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "tplWmm": 60,
+  "tplHmm": 30,
+  "elements": [
+    {
+      "kind": "text", "x": 20, "y": 10, "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "content": "{{品名}}", "bold": true, "fontSize": 34, "fontFamily": "Microsoft JhengHei",
+      "bounded": true, "boxW": 440, "boxH": 44, "align": "center", "valign": "middle",
+      "overflow": "shrink", "minSize": 14, "ratioLock": false
+    },
+    {
+      "kind": "rect", "x": 20, "y": 58, "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "filled": true, "width": 440, "height": 2, "strokeWidth": 1
+    },
+    {
+      "kind": "qr", "x": 20, "y": 68, "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "content": "{{編號}}", "width": 84, "ecLevel": "M"
+    },
+    {
+      "kind": "text", "x": 124, "y": 68, "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "content": "編號", "bold": true, "fontSize": 22, "fontFamily": "Microsoft JhengHei"
+    },
+    {
+      "kind": "text", "x": 196, "y": 68, "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "content": "{{編號}}", "fontSize": 22, "fontFamily": "Microsoft JhengHei",
+      "bounded": true, "boxW": 264, "boxH": 26, "align": "left", "valign": "middle",
+      "overflow": "shrink", "minSize": 12, "ratioLock": false
+    },
+    {
+      "kind": "text", "x": 124, "y": 96, "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "content": "批號", "bold": true, "fontSize": 22, "fontFamily": "Microsoft JhengHei"
+    },
+    {
+      "kind": "text", "x": 196, "y": 96, "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "content": "{{批號}}", "fontSize": 22, "fontFamily": "Microsoft JhengHei",
+      "bounded": true, "boxW": 264, "boxH": 26, "align": "left", "valign": "middle",
+      "overflow": "shrink", "minSize": 12, "ratioLock": false
+    },
+    {
+      "kind": "text", "x": 124, "y": 124, "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "content": "效期", "bold": true, "fontSize": 22, "fontFamily": "Microsoft JhengHei"
+    },
+    {
+      "kind": "text", "x": 196, "y": 124, "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "content": "{{效期|yyyy/mm/dd}}", "fontSize": 22, "fontFamily": "Microsoft JhengHei",
+      "bounded": true, "boxW": 264, "boxH": 26, "align": "left", "valign": "middle",
+      "overflow": "shrink", "minSize": 12, "ratioLock": false
+    },
+    {
+      "kind": "barcode", "x": 20, "y": 164, "rotation": 0, "scaleX": 1, "scaleY": 1,
+      "content": "{{編號}}", "format": "CODE128", "showText": true, "moduleWidth": 2, "height": 56
+    }
+  ]
+}

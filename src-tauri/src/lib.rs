@@ -1,0 +1,131 @@
+mod fonts;
+mod numfmt;
+mod printer;
+mod sheet;
+mod spool;
+mod tspl;
+
+use printer::PrinterTarget;
+use tspl::PrintJob;
+
+/// 前端傳來已渲染好的 1-bit 點陣（可多張），這裡組成 TSPL 並以單一列印工作送到印表機。
+#[tauri::command]
+async fn print_labels(target: PrinterTarget, jobs: Vec<PrintJob>) -> Result<(), String> {
+    let payload = tspl::build_many(&jobs)?;
+    // 假脫機與 socket 都是阻塞式，放到專用執行緒避免卡住 UI
+    tauri::async_runtime::spawn_blocking(move || printer::send(&target, &payload))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// 列出 Windows 已安裝的印表機。
+#[tauri::command]
+async fn list_printers() -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(spool::list_printers)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// 列出 Windows 已安裝的字型家族。
+#[tauri::command]
+async fn list_fonts() -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(fonts::list_fonts)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// 讀取使用者在對話框中選定的 Excel / CSV 檔，回傳欄位標題與資料列。
+#[tauri::command]
+async fn read_table(path: String, sheet: Option<String>) -> Result<sheet::TableData, String> {
+    tauri::async_runtime::spawn_blocking(move || sheet::read_table(&path, sheet.as_deref()))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// 前端要求重新格式化的一筆資料：Excel 儲存格的原始值，加上使用者在標籤上指定的格式碼。
+#[derive(serde::Deserialize)]
+struct FormatItem {
+    raw: sheet::Raw,
+    code: String,
+}
+
+/// 「欄位格式」：把原始值（數字／日期）用使用者指定的 Excel 格式碼重新格式化。
+/// 每一筆回傳格式化後的文字；格式碼看不懂或與值型別不符時為 null，前端會退回 Excel 原本的顯示。
+#[tauri::command]
+fn format_values(items: Vec<FormatItem>) -> Vec<Option<String>> {
+    items.iter().map(|it| sheet::format_raw(&it.raw, &it.code)).collect()
+}
+
+/// 從命令列參數挑出要開啟的標籤檔：第一個存在、副檔名是 .lpxl 或 .json 的路徑。
+fn pick_startup_file<I: IntoIterator<Item = String>>(args: I) -> Option<String> {
+    args.into_iter().find(|a| {
+        let l = a.to_lowercase();
+        (l.ends_with(".lpxl") || l.ends_with(".json")) && std::path::Path::new(a).is_file()
+    })
+}
+
+/// 在檔案總管雙擊標籤檔開啟程式時，Windows 把檔案路徑放在命令列參數；回傳它（沒有就是 None）。
+#[tauri::command]
+fn startup_file() -> Option<String> {
+    pick_startup_file(std::env::args().skip(1))
+}
+
+/// 檔案是否已存在（儲存時避免默默覆蓋同名檔案）。
+#[tauri::command]
+fn path_exists(path: String) -> bool {
+    std::path::Path::new(&path).is_file()
+}
+
+/// 讀取使用者在對話框中選定的文字檔（範本 JSON）。
+#[tauri::command]
+fn read_text_file(path: String) -> Result<String, String> {
+    std::fs::read_to_string(&path).map_err(|e| format!("讀取檔案失敗：{e}"))
+}
+
+/// 寫入使用者在對話框中選定的文字檔（範本 JSON）。
+#[tauri::command]
+fn write_text_file(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content).map_err(|e| format!("寫入檔案失敗：{e}"))
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            print_labels,
+            list_printers,
+            list_fonts,
+            read_table,
+            format_values,
+            read_text_file,
+            write_text_file,
+            path_exists,
+            startup_file
+        ])
+        .run(tauri::generate_context!())
+        .expect("啟動 Tauri 失敗");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pick_startup_file;
+
+    #[test]
+    fn picks_the_first_existing_label_file_argument() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("target").join("test-tmp");
+        std::fs::create_dir_all(&dir).unwrap();
+        let lpxl = dir.join("開啟測試.LPXL");
+        let json = dir.join("舊版.json");
+        let txt = dir.join("其他.txt");
+        for p in [&lpxl, &json, &txt] {
+            std::fs::write(p, "{}").unwrap();
+        }
+        let s = |p: &std::path::Path| p.to_string_lossy().into_owned();
+        // 副檔名不分大小寫；跳過不是標籤檔的參數與不存在的檔案
+        assert_eq!(pick_startup_file(vec!["--flag".into(), s(&txt), "C:\\不存在.lpxl".into(), s(&lpxl), s(&json)]), Some(s(&lpxl)));
+        assert_eq!(pick_startup_file(vec![s(&json)]), Some(s(&json)));
+        assert_eq!(pick_startup_file(vec![s(&txt)]), None);
+        assert_eq!(pick_startup_file(Vec::<String>::new()), None);
+    }
+}

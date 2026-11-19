@@ -1,0 +1,97 @@
+# 推送版本標籤（vX.Y.Z）時：在 GitHub 上從原始碼檢查、建置，並自動建立 Release 附上安裝檔與免安裝版。
+# 手動執行（Actions → Release → Run workflow）只建置並把檔案放成 Artifact，不建立 Release，適合試跑。
+#
+# 之後若取得 SignPath Foundation 的簽章，簽章步驟加在「建置」與「發布」之間。
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # 只在 GitHub 上跑（Gitea 若啟用 Actions 也不會誤觸發）
+    if: github.server_url == 'https://github.com'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: 版本號檢查（標籤、package.json、Cargo.toml、tauri.conf.json 必須一致）
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG=$(node -p "require('./package.json').version")
+          CONF=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          CARGO=$(sed -n 's/^version = "\(.*\)"/\1/p' src-tauri/Cargo.toml | head -1)
+          echo "package.json=$PKG tauri.conf.json=$CONF Cargo.toml=$CARGO"
+          if [ "$PKG" != "$CONF" ] || [ "$PKG" != "$CARGO" ]; then echo "::error::三個檔案的版本號不一致"; exit 1; fi
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v$PKG" ]; then
+            echo "::error::標籤 ${GITHUB_REF_NAME} 與程式版本 v$PKG 不一致"; exit 1
+          fi
+          echo "version=$PKG" >> "$GITHUB_OUTPUT"
+
+      - run: npm ci
+
+      - name: 型別檢查
+        run: npx tsc --noEmit
+
+      - name: 翻譯檢查（缺漏、多餘、佔位不一致都算失敗）
+        run: npm run i18n:check -- --strict
+
+      - name: Rust 單元測試
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: 建置（免安裝 exe + NSIS 安裝檔）
+        run: npm run tauri build
+
+      - name: 整理要發布的檔案
+        id: pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="${{ steps.ver.outputs.version }}"
+          mkdir -p dist-release
+          cp "src-tauri/target/release/Label Printer.exe" "dist-release/Label Printer_${VER}_x64-portable.exe"
+          cp "src-tauri/target/release/bundle/nsis/Label Printer_${VER}_x64-setup.exe" "dist-release/Label Printer_${VER}_x64-setup.exe"
+          ls -l dist-release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: label-printer-${{ steps.ver.outputs.version }}
+          path: dist-release/*
+          if-no-files-found: error
+
+      - name: 建立 Release 並上傳（只在標籤推送時）
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # 標籤說明（annotated tag 的訊息）當作 Release 說明；取不到就用預設文字
+          git fetch --force --tags origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}" || true
+          NOTES=$(git for-each-ref "refs/tags/${GITHUB_REF_NAME}" --format='%(contents)')
+          if [ -z "${NOTES// /}" ]; then NOTES="Label Printer ${GITHUB_REF_NAME}"; fi
+          printf '%s\n' "$NOTES" > release-notes.txt
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist-release/* --clobber
+            gh release edit "${GITHUB_REF_NAME}" --notes-file release-notes.txt
+          else
+            gh release create "${GITHUB_REF_NAME}" dist-release/* --title "${GITHUB_REF_NAME}" --notes-file release-notes.txt
+          fi

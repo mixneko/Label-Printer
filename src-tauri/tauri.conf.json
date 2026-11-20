@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Label Printer",
-  "version": "0.9.3",
+  "version": "0.9.8",
   "identifier": "tw.b51.labelprinter",
   "mainBinaryName": "Label Printer",
   "build": {
@@ -15,6 +15,13 @@
       { "title": "Label Printer", "width": 1280, "height": 800, "minWidth": 900, "minHeight": 600 }
     ],
     "security": { "csp": null }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYyQUEyNEI0N0Y3ODg4QjkKUldTNWlIaC90Q1NxWWxHOG9XcWRLWEVjWk5EdTdCSEN1VU9mWTQ0NnczYWh5Nm8vd3BhRUxXYTQK",
+      "endpoints": ["https://github.com/mixneko/Label-Printer/releases/latest/download/latest.json"],
+      "windows": { "installMode": "passive" }
+    }
   },
   "bundle": {
     "active": true,

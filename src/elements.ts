@@ -45,6 +45,8 @@ export interface ElementData {
   ratioLock?: boolean;
   /** 鎖定大小（不顯示縮放控制點，屬性對話框也不能改大小）；預設 false */
   sizeLocked?: boolean;
+  /** 群組編號：相同編號的物件屬於同一個群組（點其中一個就選到整組，一起移動／縮放）；沒有群組時不存 */
+  groupId?: string;
   /** 文字的「最大範圍」：限制在固定大小的文字框內，內容太長時依 overflow 處理 */
   bounded?: boolean;
   /** 最大範圍（文字框）的寬、高，單位 dots */
@@ -396,6 +398,7 @@ export async function createElement(d: ElementData): Promise<Konva.Shape> {
     draggable: !d.locked, listening: !d.locked, visible: d.visible !== false,
     name: "element", kind: d.kind, label: d.label, locked: !!d.locked,
     ratioLock: d.ratioLock ?? DEFAULT_RATIO_LOCK[d.kind], sizeLocked: !!d.sizeLocked,
+    groupId: d.groupId,
   };
 
   switch (d.kind) {
@@ -486,6 +489,7 @@ export function serialize(n: Konva.Node): ElementData {
     ...(n.getAttr("locked") ? { locked: true } : {}),
     ...(ratioLockOf(n) !== DEFAULT_RATIO_LOCK[kind] ? { ratioLock: ratioLockOf(n) } : {}),
     ...(n.getAttr("sizeLocked") ? { sizeLocked: true } : {}),
+    ...(n.getAttr("groupId") ? { groupId: n.getAttr("groupId") as string } : {}),
   };
   switch (kind) {
     case "text": {

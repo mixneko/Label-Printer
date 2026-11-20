@@ -61,7 +61,10 @@ function build(items: MenuItem[], sub = false): HTMLUListElement {
       const arrow = document.createElement("span");
       arrow.className = "arrow";
       arrow.textContent = "›";
-      li.append(arrow, build(it.items, true));
+      const sub = build(it.items, true);
+      li.append(arrow, sub);
+      // 子選單超出視窗下緣時往上推到放得下為止（太高放不下就在子選單內捲動）
+      li.addEventListener("mouseenter", () => fitSub(li, sub));
     } else if (!it.disabled) {
       li.addEventListener("click", () => {
         hideMenu();
@@ -71,6 +74,27 @@ function build(items: MenuItem[], sub = false): HTMLUListElement {
     ul.append(li);
   }
   return ul;
+}
+
+function fitSub(li: HTMLElement, sub: HTMLElement): void {
+  sub.style.top = "-5px";
+  sub.style.maxHeight = "";
+  sub.style.overflowY = "";
+  const margin = 6;
+  const room = window.innerHeight - margin * 2;
+  // display:none 時量不到尺寸；hover 規則會讓它顯示，這裡強制先顯示量一次
+  const prev = sub.style.display;
+  sub.style.display = "block";
+  const h = sub.getBoundingClientRect().height;
+  if (h > room) { sub.style.maxHeight = `${room}px`; sub.style.overflowY = "auto"; }
+  const r = sub.getBoundingClientRect();
+  const liTop = li.getBoundingClientRect().top;
+  let top = -5;
+  const over = r.bottom - (window.innerHeight - margin);
+  if (over > 0) top -= over;
+  if (liTop + top < margin) top = margin - liTop;
+  sub.style.top = `${top}px`;
+  sub.style.display = prev;
 }
 
 const hiddenListeners: Array<() => void> = [];

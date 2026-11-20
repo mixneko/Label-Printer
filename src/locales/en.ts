@@ -214,7 +214,6 @@ export const en: Table = {
   "上移": "Up",
   "下移": "Down",
   "選取物件": "Selected object",
-  "點選畫布或圖層清單中的物件，即可編輯其屬性": "Click an object on the canvas or in the layer list to edit its properties",
   "內容": "Content",
   "要放入資料欄位？": "Insert a data field?",
   "欄位格式": "Field format",
@@ -372,4 +371,45 @@ export const en: Table = {
   "安裝程式可選擇七種語言": "The installer lets you choose from seven languages",
   "介面支援繁體中文、简体中文、English、Español、Deutsch、日本語、한국어": "The interface supports Traditional Chinese, Simplified Chinese, English, Spanish, German, Japanese and Korean",
   "第一次啟動時依系統語言自動選擇語言": "The language is chosen from the system language on first launch",
+  // 圖層面板的對齊按鈕
+  "靠左對齊": "Align left",
+  "置中對齊": "Align center",
+  "靠右對齊": "Align right",
+  "把選取的物件對齊標籤的左邊": "Align the selected object to the left edge of the label",
+  "把選取的物件對齊標籤的水平中心": "Align the selected object to the horizontal center of the label",
+  "把選取的物件對齊標籤的右邊": "Align the selected object to the right edge of the label",
+  // v0.9.4 新功能說明
+  "圖層面板新增「靠左對齊／置中對齊／靠右對齊」按鈕，一鍵對齊標籤": "The Layers panel has new Align left / Align center / Align right buttons for aligning to the label in one click",
+  "右鍵選單的子選單靠近視窗下緣時不再被切掉": "Submenus of the right-click menu are no longer cut off near the bottom of the window",
+  // v0.9.5 新功能說明
+  "圖層面板版面整理：對齊按鈕在清單上方，置頂／上移／下移／置底移到清單下方，按鈕固定單列不再亂換行": "Layers panel tidied up: the align buttons sit above the list, the order buttons (bring to front / up / down / send to back) moved below it, and each row stays on a single line",
+  // 多選與群組
+  "點選畫布或圖層清單中的物件，即可編輯其屬性。按住 Ctrl 或 Shift 點選可多選，在空白處拖曳可框選": "Click an object on the canvas or in the Layers list to edit its properties. Hold Ctrl or Shift and click to select several; drag on empty space to box-select",
+  "已複製 {n} 個物件，按 Ctrl+V 貼上": "Copied {n} objects. Press Ctrl+V to paste",
+  "已建立群組（{n} 個物件）": "Group created ({n} objects)",
+  "已取消群組": "Group removed",
+  "群組": "Group",
+  "取消群組": "Ungroup",
+  "已選取一個群組（{n} 個物件）：可一起移動、縮放、對齊；要編輯單一物件請先「取消群組」": "A group is selected ({n} objects): move, resize and align them together. To edit a single object, ungroup first",
+  "已選取 {n} 個物件：可一起移動、縮放、對齊、複製或刪除；按 Ctrl+G 可組成群組": "{n} objects selected: move, resize, align, copy or delete them together. Press Ctrl+G to group them",
+  "群組：點一下會選取整個群組": "Group: click to select the whole group",
+  "把選取的多個物件組成群組（點其中一個就會選到整組，一起移動與縮放）": "Group the selected objects (clicking one selects the whole group; they move and scale together)",
+  "取消選取物件的群組": "Ungroup the selected objects",
+  // v0.9.6 新功能說明
+  "支援多選：按住 Ctrl 或 Shift 點選、在空白處拖曳框選、Ctrl+A 全選，可一起移動、縮放、對齊、複製、刪除": "Multi-select: Ctrl/Shift+click, drag on empty space to box-select, Ctrl+A to select all; move, resize, align, copy and delete them together",
+  "新增「群組」與「取消群組」（Ctrl+G／Ctrl+Shift+G），群組會存進標籤檔": "New Group and Ungroup (Ctrl+G / Ctrl+Shift+G); groups are saved in the label file",
+  "按鈕的說明改成自製提示，滑鼠停在上面不久就會顯示": "Button descriptions now use a custom tooltip that appears shortly after the pointer rests on them",
+  // v0.9.7 新功能說明
+  "校正標籤的說明文字改為固定在標籤範圍內、太長時自動縮小字級，各語言都不會再被切掉或蓋到刻度": "The calibration label's instructions now stay inside the label and shrink automatically when long, so no language gets cut off or overlaps the ruler ticks",
+  // v0.9.8 自動更新
+  "有新版本 {latest}（目前 {cur}）。要現在更新嗎？": "A new version {latest} is available (current {cur}). Update now?",
+  "立即更新": "Update now",
+  "正在下載更新…": "Downloading update…",
+  "正在下載更新… {pct}%": "Downloading update… {pct}%",
+  "下載完成，正在安裝。程式會自動關閉並重新開啟…": "Download complete, installing. The app will close and reopen automatically…",
+  "更新失敗：{err}": "Update failed: {err}",
+  "啟動時自動檢查更新": "Check for updates at startup",
+  "已開啟：啟動時自動檢查更新": "Enabled: check for updates at startup",
+  "已關閉：啟動時不再自動檢查更新": "Disabled: no automatic update check at startup",
+  "新增自動更新：啟動時自動檢查新版（可在「說明」選單關閉），安裝版有新版時可直接在程式內下載並更新": "New: automatic updates. The app checks for a new version at startup (can be turned off in the Help menu), and the installed version can download and update in place",
 };

@@ -11,7 +11,11 @@ export function calibrationElements(wmm: number, hmm: number): ElementData[] {
   const bar = (x: number, y: number, bw: number, bh: number, label: string) =>
     els.push({ kind: "rect", x, y, ...base, width: bw, height: bh, filled: true, strokeWidth: 1, label });
   const text = (x: number, y: number, content: string, size: number, label: string, bold = false) =>
-    els.push({ kind: "text", x, y, ...base, content, fontSize: size, bold, label });
+    // 限制在固定寬度內、太長就自動縮小字級（英文、德文等譯文比中文長很多，不能讓它蓋到右邊的刻度）
+    els.push({
+      kind: "text", x, y, ...base, content, fontSize: size, bold, label,
+      bounded: true, boxW: Math.max(40, w - x - 32), boxH: Math.round(size * 1.3), overflow: "shrink", minSize: 7, align: "left", valign: "middle",
+    });
 
   // 外框：四邊都要完整出現。哪一邊被切掉或離紙邊很遠，就是往那個方向偏了
   els.push({ kind: "rect", x: 1, y: 1, ...base, width: w - 2, height: h - 2, filled: false, strokeWidth: 2, label: tr("外框") });
@@ -28,8 +32,10 @@ export function calibrationElements(wmm: number, hmm: number): ElementData[] {
     bar(0, y, t, 2, tr("左刻度 {mm}", { mm }));
     bar(w - t, y, t, 2, tr("右刻度 {mm}", { mm }));
   }
-  for (let mm = 10; mm < wmm; mm += 10) text(mm * D - 9, 22, String(mm), 16, tr("上數字 {mm}", { mm }));
-  for (let mm = 10; mm < hmm; mm += 10) text(24, mm * D - 9, String(mm), 16, tr("左數字 {mm}", { mm }));
+  const num = (x: number, y: number, mm: number, label: string) =>
+    els.push({ kind: "text", x, y, ...base, content: String(mm), fontSize: 16, bold: false, label });
+  for (let mm = 10; mm < wmm; mm += 10) num(mm * D - 9, 22, mm, tr("上數字 {mm}", { mm }));
+  for (let mm = 10; mm < hmm; mm += 10) num(24, mm * D - 9, mm, tr("左數字 {mm}", { mm }));
 
   // 中心十字
   bar(w / 2 - 12, h / 2 - 1, 24, 2, tr("十字橫"));

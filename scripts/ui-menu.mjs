@@ -88,6 +88,14 @@ const sub0 = await center("#ctx-menu li.has-sub > .sub > li:first-child");
 let hoverOk = true;
 for (let k = 1; k <= 12; k++) { await mouseTo(c0.x + ((sub0.x - c0.x) * k) / 12, c0.y + ((sub0.y - c0.y) * k) / 12); await sleep(30); hoverOk = hoverOk && (await subShown()); }
 check("滑鼠由「排列」移進子選單的過程中，子選單不會收起", hoverOk);
+// 選單靠近視窗下緣時，子選單要推上來，整個都看得到
+await ev("document.querySelector('#ctx-menu').style.top = (window.innerHeight - 150) + 'px'"); await sleep(100);
+const c1 = await center("#ctx-menu li.has-sub");
+await mouseTo(c1.x, c1.y + 40); await sleep(100); await mouseTo(c1.x, c1.y); await sleep(250);
+const subRect = JSON.parse(await ev("JSON.stringify(document.querySelector('#ctx-menu li.has-sub > .sub').getBoundingClientRect())"));
+const winH = await ev("window.innerHeight");
+check("選單在視窗下緣時，子選單不會超出視窗", subRect.bottom <= winH && subRect.top >= 0, `子選單 ${Math.round(subRect.top)}–${Math.round(subRect.bottom)}／視窗高 ${winH}`);
+await ev("document.querySelector('#ctx-menu').style.top = '120px'"); await sleep(100);
 const m = JSON.parse(await ev(`JSON.stringify((() => { const r = document.querySelector('#ctx-menu').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width + 230, height: r.height + 10 }; })())`));
 await shot("1-context", { x: Math.max(0, m.x - 10), y: Math.max(0, m.y - 10), width: Math.min(m.width + 20, 700), height: m.height + 20, scale: 1 });
 
@@ -110,8 +118,17 @@ await ev(`document.querySelectorAll('#layer-list li')[0].dispatchEvent(new Mouse
 check("圖層清單的右鍵也能開選單", await menuVisible());
 await clickMenu("剪下");
 check("剪下 → 物件數 -1", (await count()) === N0, `${await count()}`);
-await rightClickAt(700, 700); // 空白處
-check("空白處右鍵只有「貼上」", JSON.stringify(await menuTexts()) === JSON.stringify(["貼上"]), (await menuTexts()).join("、"));
+// 空白處：在標籤範圍內找一個沒有物件的點（範例標籤內容變動時不必改座標）
+const so = await origin();
+const sz = JSON.parse(await ev("JSON.stringify((() => { const r = document.querySelector('#stage .konvajs-content').getBoundingClientRect(); return { w: r.width, h: r.height }; })())"));
+let blankTexts = [];
+for (const fy of [0.97, 0.9, 0.5, 0.1]) for (const fx of [0.98, 0.5, 0.02, 0.75, 0.25]) {
+  await rightClickAt(so.x + sz.w * fx, so.y + sz.h * fy);
+  blankTexts = await menuTexts();
+  if (JSON.stringify(blankTexts) === JSON.stringify(["貼上"])) break;
+  await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))");
+}
+check("空白處右鍵只有「貼上」", JSON.stringify(blankTexts) === JSON.stringify(["貼上"]), blankTexts.join("、"));
 await clickMenu("貼上");
 check("從空白處貼上 → 物件數 +1", (await count()) === N0 + 1);
 await clickBtn("#delete");
@@ -156,6 +173,16 @@ await alignBtn("靠下"); n = await node();
 check("靠下 → 下緣在 240 dots", near(n.bbox.y + n.bbox.height, 240));
 await alignBtn("靠上"); n = await node();
 check("靠上 → 上緣在 0", near(n.bbox.y, 0));
+
+// ---- 5b. 圖層面板的對齊按鈕（靠左／置中／靠右對齊標籤）----
+await setField("pp-w", 20); await alignBtn("靠左");
+await clickBtn("#align-center"); n = await node();
+check("圖層面板「置中對齊」→ 中心在 240 dots", near(n.bbox.x + n.bbox.width / 2, 240), `中心=${(n.bbox.x + n.bbox.width / 2).toFixed(2)}`);
+await clickBtn("#align-right"); n = await node();
+check("圖層面板「靠右對齊」→ 右緣在 480 dots", near(n.bbox.x + n.bbox.width, 480));
+await clickBtn("#align-left"); n = await node();
+check("圖層面板「靠左對齊」→ 左緣在 0", near(n.bbox.x, 0));
+check("有選取物件時對齊按鈕可按", !(await ev("document.getElementById('align-left').disabled")));
 
 // ---- 6. 旋轉、名稱、鎖定大小、隱藏 ----
 await setField("pp-rot", 90); n = await node();

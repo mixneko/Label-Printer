@@ -30,6 +30,12 @@ npm run tauri build
 - `src-tauri/target/release/Label Printer.exe`：单一可执行文件，复制即可使用（需要 WebView2，Win11 已内置）。
 - `src-tauri/target/release/bundle/nsis/*-setup.exe`：安装包，内嵌 WebView2 引导程序，Win10 也能安装；安装到当前用户，不需要管理员权限。
 
+## 自动更新
+
+安装版启动时会在后台向 GitHub 查询一次是否有新版（只读取公开的版本信息，不发送任何数据）；有新版就弹出窗口，点“立即更新”即可在程序内下载、验证签名、安装并自动重启。可在“帮助 → 启动时自动检查更新”关闭，也可随时用“帮助 → 检查新版本”手动检查。免安装版无法原地更新，会改为打开下载页面。
+
+维护者：发布流程（`.github/workflows/release.yml`）需要仓库 Secret `TAURI_SIGNING_PRIVATE_KEY`（更新签名私钥，由 `tauri signer generate` 生成；公钥在 `src-tauri/tauri.conf.json`）。丢失私钥就无法再向旧版用户推送更新。
+
 ## 架构
 
 - 前端把标签渲染为 1-bit 点阵，后端转成 TSPL（`SIZE/GAP/BITMAP/PRINT`）。

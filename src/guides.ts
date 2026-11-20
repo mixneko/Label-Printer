@@ -27,7 +27,7 @@ export function clearGuides(layer: Konva.Layer): void {
 }
 
 /** 掛上拖曳時的對齊線；layer 重建時要重新呼叫 */
-export function attachGuides(layer: Konva.Layer, labelSize: () => { w: number; h: number }, zoom: () => number): void {
+export function attachGuides(layer: Konva.Layer, labelSize: () => { w: number; h: number }, zoom: () => number, ignore: () => Konva.Node[] = () => []): void {
   layer.on("dragmove.guides", (e) => {
     const n = e.target;
     if (!(n instanceof Konva.Shape) || !n.hasName("element")) return;
@@ -36,10 +36,11 @@ export function attachGuides(layer: Konva.Layer, labelSize: () => { w: number; h
 
     const { w, h } = labelSize();
     const tol = THRESHOLD_PX / zoom();
+    const skip = new Set<Konva.Node>(ignore());
     const xs: Cand[] = [0, w / 2, w].map((v) => ({ v, from: 0, to: h }));
     const ys: Cand[] = [0, h / 2, h].map((v) => ({ v, from: 0, to: w }));
     for (const o of layer.find<Konva.Shape>(".element")) {
-      if (o === n || !o.visible()) continue;
+      if (o === n || skip.has(o) || !o.visible()) continue;
       const r = bbox(o, layer);
       for (const v of [r.x, r.x + r.width / 2, r.x + r.width]) xs.push({ v, from: r.y, to: r.y + r.height });
       for (const v of [r.y, r.y + r.height / 2, r.y + r.height]) ys.push({ v, from: r.x, to: r.x + r.width });

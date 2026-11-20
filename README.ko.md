@@ -30,6 +30,12 @@ npm run tauri build
 - `src-tauri/target/release/Label Printer.exe`: 단일 실행 파일로, 복사만 하면 바로 사용할 수 있습니다(WebView2 필요, Win11에는 기본 포함).
 - `src-tauri/target/release/bundle/nsis/*-setup.exe`: WebView2 부트스트래퍼가 내장된 설치 파일이라 Win10에서도 설치할 수 있습니다. 현재 사용자용으로 설치되며 관리자 권한이 필요 없습니다.
 
+## 자동 업데이트
+
+설치 버전은 시작할 때 백그라운드에서 GitHub에 새 버전이 있는지 한 번 확인합니다(공개된 릴리스 정보만 읽으며 어떤 데이터도 보내지 않습니다). 새 버전이 있으면 대화상자가 나타나고, "지금 업데이트"를 누르면 프로그램 안에서 내려받아 서명을 검증하고 설치한 뒤 자동으로 다시 시작합니다. "도움말 → 시작할 때 업데이트 확인"에서 끌 수 있고, "도움말 → 새 버전 확인"으로 언제든 직접 확인할 수 있습니다. 포터블 버전은 제자리에서 업데이트할 수 없어 다운로드 페이지를 엽니다.
+
+유지 관리자: 릴리스 워크플로(`.github/workflows/release.yml`)에는 저장소 Secret `TAURI_SIGNING_PRIVATE_KEY`(업데이트 서명용 개인 키, `tauri signer generate`로 생성, 공개 키는 `src-tauri/tauri.conf.json`)가 필요합니다. 개인 키를 잃으면 기존 사용자에게 업데이트를 보낼 수 없습니다.
+
 ## 구조
 
 - 프런트엔드가 라벨을 1비트 비트맵으로 렌더링하고, 백엔드가 이를 TSPL(`SIZE/GAP/BITMAP/PRINT`)로 변환합니다.

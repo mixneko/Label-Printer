@@ -137,7 +137,7 @@ await click("file-menu");
 check("「檔案」選單不含「產生校正標籤」", !(await labels()).some((l) => l.includes("校正")), JSON.stringify(await labels()));
 await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))"); await sleep(100);
 await click("help-menu");
-check("「說明」選單：關於、第三方授權聲明", JSON.stringify(await labels()) === JSON.stringify(["關於 Label Printer", "第三方授權聲明"]));
+check("「說明」選單：關於、第三方授權聲明、檢查新版本、新功能、啟動時自動檢查更新（預設打勾）", JSON.stringify(await labels()) === JSON.stringify(["關於 Label Printer", "第三方授權聲明", "檢查新版本", "新功能", "啟動時自動檢查更新✓"]));
 await t.shot("1-bar");
 await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))"); await sleep(100);
 

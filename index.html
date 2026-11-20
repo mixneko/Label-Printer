@@ -33,6 +33,11 @@
         <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5"/></symbol>
         <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
         <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+        <symbol id="i-align-l" viewBox="0 0 24 24"><path d="M21 6H3M15 12H3M17 18H3"/></symbol>
+        <symbol id="i-align-c" viewBox="0 0 24 24"><path d="M21 6H3M17 12H7M19 18H5"/></symbol>
+        <symbol id="i-align-r" viewBox="0 0 24 24"><path d="M21 6H3M21 12H9M21 18H7"/></symbol>
+        <symbol id="i-group" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="7" height="5" x="7" y="7" rx="1"/><rect width="7" height="5" x="10" y="12" rx="1"/></symbol>
+        <symbol id="i-ungroup" viewBox="0 0 24 24"><rect width="8" height="6" x="2" y="4" rx="1"/><rect width="8" height="6" x="14" y="14" rx="1"/><path d="M14 4h2a2 2 0 0 1 2 2v2M10 20H8a2 2 0 0 1-2-2v-2"/></symbol>
         <symbol id="i-top" viewBox="0 0 24 24"><path d="M5 3h14M18 13l-6-6-6 6M12 7v14"/></symbol>
         <symbol id="i-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7M12 19V5"/></symbol>
         <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14m7-7-7 7-7-7"/></symbol>
@@ -106,20 +111,30 @@
         <details class="card" open>
           <summary>圖層 <small>上面的蓋住下面的</small></summary>
           <div class="card-body">
+            <div id="align-tools" class="layer-tools">
+              <button id="align-left" type="button" class="btn sm" title="把選取的物件對齊標籤的左邊" disabled><svg class="ic"><use href="#i-align-l" /></svg>靠左對齊</button>
+              <button id="align-center" type="button" class="btn sm" title="把選取的物件對齊標籤的水平中心" disabled><svg class="ic"><use href="#i-align-c" /></svg>置中對齊</button>
+              <button id="align-right" type="button" class="btn sm" title="把選取的物件對齊標籤的右邊" disabled><svg class="ic"><use href="#i-align-r" /></svg>靠右對齊</button>
+            </div>
+            <ul id="layer-list" class="layer-list"></ul>
             <div id="layer-tools" class="layer-tools">
               <button id="layer-top" type="button" class="btn sm" title="移到最上層" disabled><svg class="ic"><use href="#i-top" /></svg>置頂</button>
               <button id="layer-up" type="button" class="btn sm" title="往上一層" disabled><svg class="ic"><use href="#i-up" /></svg>上移</button>
               <button id="layer-down" type="button" class="btn sm" title="往下一層" disabled><svg class="ic"><use href="#i-down" /></svg>下移</button>
               <button id="layer-bottom" type="button" class="btn sm" title="移到最下層" disabled><svg class="ic"><use href="#i-bottom" /></svg>置底</button>
             </div>
-            <ul id="layer-list" class="layer-list"></ul>
+            <div id="group-tools" class="layer-tools">
+              <button id="group-btn" type="button" class="btn sm" title="把選取的多個物件組成群組（點其中一個就會選到整組，一起移動與縮放）" disabled><svg class="ic"><use href="#i-group" /></svg>群組</button>
+              <button id="ungroup-btn" type="button" class="btn sm" title="取消選取物件的群組" disabled><svg class="ic"><use href="#i-ungroup" /></svg>取消群組</button>
+            </div>
           </div>
         </details>
 
         <details class="card" open>
           <summary>選取物件</summary>
           <div class="card-body">
-            <p id="no-selection" class="hint">點選畫布或圖層清單中的物件，即可編輯其屬性</p>
+            <p id="no-selection" class="hint">點選畫布或圖層清單中的物件，即可編輯其屬性。按住 Ctrl 或 Shift 點選可多選，在空白處拖曳可框選</p>
+            <p id="multi-info" class="hint" hidden></p>
 
             <label data-kinds="text qr barcode">內容
               <textarea id="prop-text" rows="3"></textarea>
@@ -427,6 +442,7 @@
       <div class="dlg-body"><p id="update-msg" class="close-msg"></p></div>
       <footer class="dlg-foot">
         <span class="spacer"></span>
+        <button id="update-install" type="button" class="btn primary" hidden>立即更新</button>
         <button id="update-go" type="button" class="btn primary" hidden>前往下載頁面</button>
         <button id="update-close" type="button" class="btn">關閉</button>
       </footer>

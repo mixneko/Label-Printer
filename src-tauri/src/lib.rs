@@ -99,6 +99,16 @@ fn open_url(url: String) -> Result<(), String> {
     }
 }
 
+/// 這個程式是不是用安裝檔裝出來的（安裝資料夾裡有 NSIS 的 uninstall.exe）。
+/// 只有安裝版能原地更新；免安裝版自己執行，更新時改成開啟下載頁。
+#[tauri::command]
+fn is_installed() -> bool {
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.join("uninstall.exe")))
+        .is_some_and(|p| p.is_file())
+}
+
 /// 檔案是否已存在（儲存時避免默默覆蓋同名檔案）。
 #[tauri::command]
 fn path_exists(path: String) -> bool {
@@ -121,6 +131,7 @@ fn write_text_file(path: String, content: String) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             print_labels,
             open_url,
@@ -131,7 +142,8 @@ pub fn run() {
             read_text_file,
             write_text_file,
             path_exists,
-            startup_file
+            startup_file,
+            is_installed
         ])
         .run(tauri::generate_context!())
         .expect("啟動 Tauri 失敗");

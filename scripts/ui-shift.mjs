@@ -46,6 +46,15 @@ check("按「產生校正標籤」→ 畫布出現外框與刻度", labels.inclu
 check("刻度數量正確（上下各 61、左右各 31，含 0）", labels.filter((l) => l?.startsWith("上刻度")).length === 61 && labels.filter((l) => l?.startsWith("右刻度")).length === 31);
 check("含說明文字", labels.includes("標題"));
 check("校正標籤不算未儲存的變更（關閉不會詢問）", !(await ev("document.getElementById('tpl-name').classList.contains('dirty')")));
+// 各語言的說明文字都要放得進標籤、不能蓋到右邊的刻度（譯文比中文長，靠自動縮小字級）
+for (const lang of ["en", "de", "es", "ja", "ko"]) {
+  await ev(`window.__lp.i18n.changeLang('${lang}')`); await sleep(300);
+  await ev("document.getElementById('make-calibration').click()"); await sleep(1500);
+  const r = JSON.parse(await ev(`JSON.stringify(window.__lp.konva.stages[0].find('.element').filter(n => n.getAttr('bounded')).map(n => ({ right: n.x() + n.width() * n.scaleX(), fs: n.fontSize() })))`));
+  const wDots = Number(await ev("document.getElementById('tpl-w').value")) * 8;
+  check(`${lang}：校正標籤說明文字不超出右緣刻度且字級不小於 10 點`, r.length === 5 && r.every((o) => o.right <= wDots - 20 && o.fs >= 10), JSON.stringify(r));
+}
+await ev("window.__lp.i18n.changeLang('zh-TW')"); await sleep(300);
 // 改變標籤尺寸後再產生，刻度跟著改
 await setv("tpl-w", "50"); await setv("tpl-h", "25"); await sleep(600);
 await ev("document.getElementById('make-calibration').click()"); await sleep(1500);

@@ -57,8 +57,22 @@ jobs:
       - name: Rust 單元測試
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
-      - name: 建置（免安裝 exe + NSIS 安裝檔）
-        run: npm run tauri build
+      - name: 確認更新簽章金鑰已設定
+        shell: bash
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::缺少 Secret TAURI_SIGNING_PRIVATE_KEY（Settings → Secrets and variables → Actions）。沒有它無法簽出自動更新用的檔案"
+            exit 1
+          fi
+
+      - name: 建置（免安裝 exe + NSIS 安裝檔 + 更新簽章）
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        # 只在這裡開啟 createUpdaterArtifacts：本機與 Gitea 的建置沒有私鑰，不產生更新簽章
+        run: npm run tauri build -- --config '{"bundle":{"createUpdaterArtifacts":true}}'
 
       - name: 整理要發布的檔案
         id: pack
@@ -69,6 +83,10 @@ jobs:
           mkdir -p dist-release
           cp "src-tauri/target/release/Label Printer.exe" "dist-release/Label Printer_${VER}_x64-portable.exe"
           cp "src-tauri/target/release/bundle/nsis/Label Printer_${VER}_x64-setup.exe" "dist-release/Label Printer_${VER}_x64-setup.exe"
+          cp "src-tauri/target/release/bundle/nsis/Label Printer_${VER}_x64-setup.exe.sig" "dist-release/Label Printer_${VER}_x64-setup.exe.sig"
+          # 試跑也先產生一份 latest.json 驗證流程（標籤推送時發布步驟會用真正的說明重做）
+          printf 'Label Printer v%s\n' "$VER" > trial-notes.txt
+          node scripts/make-latest-json.mjs "$VER" "v$VER" trial-notes.txt dist-release
           ls -l dist-release
 
       - uses: actions/upload-artifact@v6
@@ -89,9 +107,20 @@ jobs:
           NOTES=$(git for-each-ref "refs/tags/${GITHUB_REF_NAME}" --format='%(contents)')
           if [ -z "${NOTES// /}" ]; then NOTES="Label Printer ${GITHUB_REF_NAME}"; fi
           printf '%s\n' "$NOTES" > release-notes.txt
+          # 自動更新用的 latest.json（內含更新檔網址與簽章，程式只在簽章驗證通過時才安裝）
+          node scripts/make-latest-json.mjs "${{ steps.ver.outputs.version }}" "${GITHUB_REF_NAME}" release-notes.txt dist-release
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
             gh release upload "${GITHUB_REF_NAME}" dist-release/* --clobber
             gh release edit "${GITHUB_REF_NAME}" --notes-file release-notes.txt
           else
             gh release create "${GITHUB_REF_NAME}" dist-release/* --title "${GITHUB_REF_NAME}" --notes-file release-notes.txt
           fi
+
+          # 核對：latest.json 裡的更新檔網址，檔名必須真的存在於這個 Release（GitHub 會改寫檔名裡的空白）
+          URL_NAME=$(node -p "require('./dist-release/latest.json').platforms['windows-x86_64'].url.split('/').pop()")
+          if ! gh release view "${GITHUB_REF_NAME}" --json assets -q '.assets[].name' | grep -Fxq "$URL_NAME"; then
+            echo "::error::Release 內找不到 latest.json 指向的檔案：$URL_NAME"
+            gh release view "${GITHUB_REF_NAME}" --json assets -q '.assets[].name'
+            exit 1
+          fi
+          echo "latest.json 指向的 $URL_NAME 確實存在"

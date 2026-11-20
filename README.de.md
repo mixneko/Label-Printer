@@ -30,6 +30,12 @@ Ergebnis:
 - `src-tauri/target/release/Label Printer.exe`: eine einzelne ausführbare Datei, einfach kopieren und starten (benötigt WebView2, in Win11 enthalten).
 - `src-tauri/target/release/bundle/nsis/*-setup.exe`: Installationsprogramm mit eingebettetem WebView2-Bootstrapper, daher auch unter Win10 installierbar; wird für den aktuellen Benutzer installiert und braucht keine Administratorrechte.
 
+## Automatische Updates
+
+Die installierte Version fragt beim Start einmal im Hintergrund bei GitHub nach (es werden nur öffentliche Versionsinformationen gelesen, es werden keine Daten gesendet). Gibt es eine neue Version, erscheint ein Dialog; mit „Jetzt aktualisieren“ wird sie im Programm heruntergeladen, die Signatur geprüft, installiert und das Programm automatisch neu gestartet. Abschalten unter „Hilfe → Beim Start nach Updates suchen“; manuell jederzeit über „Hilfe → Nach Updates suchen“. Die portable Version kann nicht an Ort und Stelle aktualisieren und öffnet stattdessen die Download-Seite.
+
+Maintainer: Der Release-Workflow (`.github/workflows/release.yml`) benötigt das Repository-Secret `TAURI_SIGNING_PRIVATE_KEY` (privater Signaturschlüssel für Updates, erzeugt mit `tauri signer generate`; der öffentliche Schlüssel steht in `src-tauri/tauri.conf.json`). Geht der private Schlüssel verloren, können bestehenden Nutzern keine Updates mehr geliefert werden.
+
 ## Architektur
 
 - Das Frontend rendert das Etikett als 1-Bit-Bitmap, das Backend wandelt es in TSPL um (`SIZE/GAP/BITMAP/PRINT`).

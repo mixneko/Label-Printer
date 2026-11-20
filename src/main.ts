@@ -6,7 +6,8 @@ import { ask, open, save } from "@tauri-apps/plugin-dialog";
 import { askClose } from "./closedialog";
 import { showAbout, showLicenses } from "./about";
 import { initTheme } from "./theme";
-import { checkForUpdate, maybeShowWhatsNew, showWhatsNew } from "./update";
+import "./tooltip";
+import { autoCheckEnabled, autoCheckOnStartup, checkForUpdate, maybeShowWhatsNew, setAutoCheck, showWhatsNew } from "./update";
 import { N, applyDom, currentLang, detectLang, saveLang, setLang, t as tr } from "./i18n";
 import { LANG_NAMES, LOCALES, type Lang } from "./locales";
 import { attachGuides, guidesEnabled, setGuidesEnabled } from "./guides";
@@ -14,7 +15,7 @@ import { calibrationElements } from "./calibration";
 import { canvasToMono, monoToCanvas, toBase64, type PackedBitmap } from "./bitmap";
 import { initTable, selectedRows, tableHeaders } from "./table";
 import { initPreview, openPreview } from "./printpreview";
-import { initLayers, moveElement, refreshLayers, toggleLocked, toggleVisible } from "./layers";
+import { initLayers, moveElements, refreshLayers, toggleLocked, toggleVisible } from "./layers";
 import { ALIGN_LABEL, alignTo, bbox, type Align } from "./arrange";
 import { hideMenu, isMenuOpen, onMenuHidden, showMenu, type MenuItem } from "./contextmenu";
 import { baseName, clearRecent, loadRecent, pushRecent, removeRecent, shortDir } from "./recent";
@@ -38,7 +39,8 @@ let zoom = 2;
 let stage: Konva.Stage;
 let layer: Konva.Layer;
 let transformer: Konva.Transformer;
-let selected: Konva.Shape | null = null;
+let selected: Konva.Shape | null = null; // 剛好選了一個物件時才有值（屬性面板只編輯這一個）
+let selection: Konva.Shape[] = []; // 目前選取的全部物件（多選、群組整組）
 
 function updateStageCaption(): void {
   $("stage-caption").textContent = tr("標籤 {tw} × {th} mm（紙張 {pw} × {ph} mm）", { tw: settings.tplWmm, th: settings.tplHmm, pw: settings.paperWmm, ph: settings.paperHmm });
@@ -59,7 +61,26 @@ function buildStage(): void {
   // 用 mousedown（而非 click）選取，這樣「直接拖曳尚未選取的物件」也會一併選取它
   stage.on("mousedown tap", (e) => {
     if (e.target.getParent() instanceof Konva.Transformer) return; // 點到縮放控制點
-    select(e.target.hasName("element") ? (e.target as Konva.Shape) : null);
+    const el = e.target.hasName("element") ? (e.target as Konva.Shape) : null;
+    const ev = e.evt as MouseEvent;
+    const add = !!(ev.ctrlKey || ev.metaKey || ev.shiftKey); // Ctrl／Shift：加入或移除，不取代
+    dragMoved = false;
+    downOn = null;
+    if (el) {
+      if (add) {
+        const members = groupMembers(el);
+        const all = members.every((m) => selection.includes(m));
+        setSelection(all ? selection.filter((x) => !members.includes(x)) : [...selection, ...members]);
+      } else if (!selection.includes(el)) select(el);
+      else if (selection.length > 1 && !el.getAttr("groupId")) downOn = el; // 沒拖曳就放開：只留這一個
+    } else {
+      if (!add) select(null);
+      startMarquee(add ? selection.slice() : []);
+    }
+  });
+  stage.on("mouseup touchend", () => {
+    if (downOn && !dragMoved && selection.length > 1) select(downOn);
+    downOn = null;
   });
   // QR / 條碼在 transformend 時會重新產生影像，之後需更新選取框
   // Konva 的 Transformer 通知物件 transformend 時「不會往上冒泡到圖層」，所以要直接掛在 transformer 上。
@@ -69,13 +90,30 @@ function buildStage(): void {
     markDirty();
   });
   layer.on("dragend", markDirty);
-  attachGuides(layer, () => ({ w: mmToDots(settings.tplWmm), h: mmToDots(settings.tplHmm) }), () => zoom);
+  attachGuides(layer, () => ({ w: mmToDots(settings.tplWmm), h: mmToDots(settings.tplHmm) }), () => zoom, () => selection);
+  // 多選時拖曳其中一個，其餘一起移動（對齊線吸附後的位移同樣套用到全部）
+  layer.on("dragstart.multi", (e) => {
+    dragMoved = true;
+    dragStart = selection.length > 1 && selection.includes(e.target as Konva.Shape)
+      ? new Map(selection.map((n) => [n, { x: n.x(), y: n.y() }]))
+      : null;
+  });
+  layer.on("dragmove.multi", (e) => {
+    const lead = e.target as Konva.Shape;
+    const s0 = dragStart?.get(lead);
+    if (!dragStart || !s0) return;
+    const dx = lead.x() - s0.x, dy = lead.y() - s0.y;
+    for (const [n, p0] of dragStart) if (n !== lead) n.position({ x: p0.x + dx, y: p0.y + dy });
+  });
+  layer.on("dragend.multi", () => { dragStart = null; });
+  stage.on("mousemove touchmove", () => updateMarquee());
   // 右鍵：選取該物件並顯示自訂選單（取代瀏覽器預設的「另存影像／複製影像」）
   stage.on("contextmenu", (e) => {
     e.evt.preventDefault();
     const n = e.target.hasName("element") ? (e.target as Konva.Shape) : null;
-    select(n);
-    showElementMenu(n, e.evt.clientX, e.evt.clientY);
+    if (!(n && selection.length > 1 && selection.includes(n))) select(n); // 在多選的物件上按右鍵：保留多選
+    if (n && selection.length > 1) showMultiMenu(e.evt.clientX, e.evt.clientY);
+    else showElementMenu(n, e.evt.clientX, e.evt.clientY);
   });
   select(null);
 }
@@ -96,14 +134,64 @@ function fitZoom(): void {
   stage.scale({ x: zoom, y: zoom });
 }
 
+let dragMoved = false; // 這次按下是否拖曳過（沒拖曳才把多選縮回單選）
+let downOn: Konva.Shape | null = null;
+let dragStart: Map<Konva.Shape, { x: number; y: number }> | null = null;
+
+/** 同一群組的全部成員（沒有群組就是自己） */
+function groupMembers(n: Konva.Shape): Konva.Shape[] {
+  const g = n.getAttr("groupId") as string | undefined;
+  return g ? elements().filter((e) => e.getAttr("groupId") === g) : [n];
+}
+
+// ---- 框選：在空白處拖曳畫出選取框，碰到的物件都選起來（按住 Ctrl／Shift 則加入目前的選取）----
+let marquee: Konva.Rect | null = null;
+let marqueeFrom: { x: number; y: number } | null = null;
+let marqueeBase: Konva.Shape[] = [];
+function startMarquee(base: Konva.Shape[]): void {
+  const p = layer.getRelativePointerPosition();
+  if (!p) return;
+  marqueeFrom = { x: p.x, y: p.y };
+  marqueeBase = base;
+  const end = (): void => {
+    window.removeEventListener("mouseup", end);
+    marquee?.destroy();
+    marquee = null;
+    marqueeFrom = null;
+    layer?.batchDraw();
+  };
+  window.addEventListener("mouseup", end);
+}
+function updateMarquee(): void {
+  if (!marqueeFrom) return;
+  const p = layer.getRelativePointerPosition();
+  if (!p) return;
+  const x = Math.min(marqueeFrom.x, p.x), y = Math.min(marqueeFrom.y, p.y);
+  const w = Math.abs(p.x - marqueeFrom.x), h = Math.abs(p.y - marqueeFrom.y);
+  if (!marquee) {
+    if (w < 3 && h < 3) return; // 只是點一下，不算框選
+    marquee = new Konva.Rect({ stroke: "#2f81f7", strokeWidth: 1 / zoom, dash: [4 / zoom, 3 / zoom], fill: "rgba(47,129,247,0.08)", listening: false, name: "marquee" });
+    layer.add(marquee);
+  }
+  marquee.setAttrs({ x, y, width: w, height: h });
+  const hit = elements().filter((n) => {
+    if (!n.visible() || n.getAttr("locked")) return false;
+    const r = bbox(n, layer);
+    return r.x < x + w && r.x + r.width > x && r.y < y + h && r.y + r.height > y;
+  });
+  setSelection([...marqueeBase, ...hit]);
+}
+
 function elements(): Konva.Shape[] {
   return Array.from(layer.find<Konva.Shape>(".element"));
 }
 
 /** 依選取物件的設定（鎖定縱橫比 / 鎖定大小）調整縮放控制點；物件的設定改變時也要呼叫 */
 function applyTransformerState(): void {
-  const keep = ratioLockOf(selected);
+  const multi = selection.length > 1;
+  const keep = multi || ratioLockOf(selected);
   transformer.keepRatio(keep);
+  transformer.rotateEnabled(!multi); // 多選／群組只能移動與等比例縮放，不能一起旋轉
   // 鎖定縱橫比時只開放四個角的控制點，避免拉邊緣時比例被破壞
   transformer.enabledAnchors(
     keep
@@ -111,67 +199,138 @@ function applyTransformerState(): void {
       : ["top-left", "top-center", "top-right", "middle-left", "middle-right", "bottom-left", "bottom-center", "bottom-right"],
   );
   // 「鎖定大小」：不顯示縮放控制點（仍可移動、旋轉）
-  transformer.resizeEnabled(!selected?.getAttr("sizeLocked"));
+  transformer.resizeEnabled(!selection.some((n) => n.getAttr("sizeLocked")));
 }
 
-function select(node: Konva.Shape | null): void {
-  selected = node;
-  transformer.nodes(node ? [node] : []);
+/** 指定選取的物件（群組整組一起選；鎖定與隱藏的不會被選到） */
+function setSelection(nodes: Konva.Shape[]): void {
+  const set = new Set<Konva.Shape>();
+  for (const n of nodes) for (const m of groupMembers(n)) if (m.visible() && !m.getAttr("locked") && m.getStage()) set.add(m);
+  selection = elements().filter((n) => set.has(n)); // 依前後順序排列
+  selected = selection.length === 1 ? selection[0] : null;
+  transformer.nodes(selection);
   applyTransformerState();
   syncPanel();
   refreshLayers();
   refreshVarSelect();
 }
 
-async function addElement(d: ElementData): Promise<void> {
-  const node = await createElement(d);
-  layer.add(node);
-  transformer.moveToTop();
-  select(node);
-  markDirty();
+function select(node: Konva.Shape | null): void {
+  setSelection(node ? [node] : []);
 }
 
+async function addElements(ds: ElementData[]): Promise<void> {
+  const nodes: Konva.Shape[] = [];
+  for (const d of ds) {
+    const node = await createElement(d);
+    layer.add(node);
+    nodes.push(node);
+  }
+  transformer.moveToTop();
+  setSelection(nodes);
+  markDirty();
+}
+const addElement = (d: ElementData): Promise<void> => addElements([d]);
+
 function removeNode(n: Konva.Shape): void {
-  n.destroy();
-  if (selected === n) select(null);
+  removeNodes([n]);
+}
+
+function removeNodes(nodes: Konva.Shape[]): void {
+  if (!nodes.length) return;
+  const hadSel = nodes.some((n) => selection.includes(n));
+  for (const n of nodes) n.destroy();
+  if (hadSel) setSelection(selection.filter((n) => !nodes.includes(n)));
   else refreshLayers();
   markDirty();
 }
 
 function removeSelected(): void {
-  if (selected) removeNode(selected);
+  removeNodes(selection.filter((n) => !n.getAttr("locked")));
 }
 
 // ---------- 剪貼簿與右鍵選單 ----------
-/** 程式內部的剪貼簿（存的是序列化後的物件資料，可複製後貼到另一個範本） */
-let clip: ElementData | null = null;
+/** 程式內部的剪貼簿（存的是序列化後的物件資料，可複製後貼到另一個範本）；多選時存全部，群組關係一併保留 */
+let clip: ElementData[] = [];
 let pasteCount = 0;
 
-function copyNode(n: Konva.Shape): void {
-  clip = serialize(n);
+function copyNodes(nodes: Konva.Shape[]): void {
+  clip = nodes.map((n) => serialize(n));
   pasteCount = 0;
-  setStatus(tr("已複製，按 Ctrl+V 貼上"), "ok");
+  setStatus(nodes.length > 1 ? tr("已複製 {n} 個物件，按 Ctrl+V 貼上", { n: nodes.length }) : tr("已複製，按 Ctrl+V 貼上"), "ok");
 }
+const copyNode = (n: Konva.Shape): void => copyNodes([n]);
 
-function cutNode(n: Konva.Shape): void {
-  copyNode(n);
-  removeNode(n);
+function cutNodes(nodes: Konva.Shape[]): void {
+  copyNodes(nodes);
+  removeNodes(nodes);
+}
+const cutNode = (n: Konva.Shape): void => cutNodes([n]);
+
+let groupSeq = 0;
+const newGroupId = (): string => `g${Date.now().toString(36)}${(groupSeq++).toString(36)}`;
+
+/** 把一批資料複製成新物件（位移 off；群組換成新編號，貼上後仍是一組，但不與原本的群組相連） */
+function cloneData(ds: ElementData[], off: number): ElementData[] {
+  const map = new Map<string, string>();
+  return ds.map((d) => {
+    let groupId = d.groupId;
+    if (groupId) { if (!map.has(groupId)) map.set(groupId, newGroupId()); groupId = map.get(groupId); }
+    return { ...d, x: d.x + off, y: d.y + off, locked: false, groupId };
+  });
 }
 
 async function pasteClip(): Promise<void> {
-  if (!clip) return;
+  if (!clip.length) return;
   pasteCount++;
-  const off = 8 * pasteCount; // 每次貼上位移 1 mm，避免疊在一起看不出來
-  await addElement({ ...clip, x: clip.x + off, y: clip.y + off, locked: false });
+  await addElements(cloneData(clip, 8 * pasteCount)); // 每次貼上位移 1 mm，避免疊在一起看不出來
 }
 
-async function duplicateNode(n: Konva.Shape): Promise<void> {
-  const d = serialize(n);
-  await addElement({ ...d, x: d.x + 8, y: d.y + 8, locked: false });
+async function duplicateNodes(nodes: Konva.Shape[]): Promise<void> {
+  await addElements(cloneData(nodes.map((n) => serialize(n)), 8));
+}
+const duplicateNode = (n: Konva.Shape): Promise<void> => duplicateNodes([n]);
+
+/** 群組：把選取的物件綁在一起（點其中一個就選到整組，一起移動與縮放）；再按一次「取消群組」拆開 */
+function groupSelection(): void {
+  if (selection.length < 2) return;
+  const id = newGroupId();
+  for (const n of selection) n.setAttr("groupId", id);
+  setStatus(tr("已建立群組（{n} 個物件）", { n: selection.length }), "ok");
+  refreshLayers();
+  markDirty();
+}
+
+function ungroupSelection(): void {
+  const grouped = selection.filter((n) => n.getAttr("groupId"));
+  if (!grouped.length) return;
+  for (const n of grouped) n.setAttr("groupId", undefined);
+  setStatus(tr("已取消群組"), "ok");
+  refreshLayers();
+  markDirty();
 }
 
 function alignNode(n: Konva.Shape, how: Align): void {
-  alignTo(n, layer, how, mmToDots(settings.tplWmm), mmToDots(settings.tplHmm));
+  alignSelection([n], how);
+}
+
+/** 對齊標籤；選了多個時把它們當成一整塊，整塊對齊（彼此的相對位置不變） */
+function alignSelection(nodes: Konva.Shape[], how: Align): void {
+  const w = mmToDots(settings.tplWmm), h = mmToDots(settings.tplHmm);
+  if (nodes.length === 1) alignTo(nodes[0], layer, how, w, h);
+  else if (nodes.length > 1) {
+    const rs = nodes.map((n) => bbox(n, layer));
+    const x0 = Math.min(...rs.map((r) => r.x)), x1 = Math.max(...rs.map((r) => r.x + r.width));
+    const y0 = Math.min(...rs.map((r) => r.y)), y1 = Math.max(...rs.map((r) => r.y + r.height));
+    let dx = 0, dy = 0;
+    if (how === "left") dx = -x0;
+    else if (how === "hcenter") dx = w / 2 - (x0 + x1) / 2;
+    else if (how === "right") dx = w - x1;
+    else if (how === "top") dy = -y0;
+    else if (how === "vcenter") dy = h / 2 - (y0 + y1) / 2;
+    else if (how === "bottom") dy = h - y1;
+    for (const n of nodes) n.move({ x: dx, y: dy });
+  }
   transformer.forceUpdate();
   layer.batchDraw();
   markDirty();
@@ -179,7 +338,7 @@ function alignNode(n: Konva.Shape, how: Align): void {
 
 function showElementMenu(n: Konva.Shape | null, x: number, y: number): void {
   if (!n) {
-    showMenu(x, y, [{ label: tr("貼上"), hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() }]);
+    showMenu(x, y, [{ label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() }]);
     return;
   }
   const locked = !!n.getAttr("locked");
@@ -188,7 +347,7 @@ function showElementMenu(n: Konva.Shape | null, x: number, y: number): void {
   if (locked) {
     showMenu(x, y, [
       { label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNode(n) },
-      { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() },
+      { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
       { separator: true },
       { label: tr("解除鎖定"), onClick: () => toggleLocked(n) },
       { separator: true },
@@ -204,16 +363,16 @@ function showElementMenu(n: Konva.Shape | null, x: number, y: number): void {
   showMenu(x, y, [
     { label: tr("剪下"), hint: "Ctrl+X", onClick: () => cutNode(n) },
     { label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNode(n) },
-    { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() },
+    { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
     { label: tr("重複"), hint: "Ctrl+D", onClick: () => void duplicateNode(n) },
     { separator: true },
     {
       label: tr("排列"),
       items: [
-        { label: tr("置頂"), onClick: () => moveElement(n, "top") },
-        { label: tr("上移一層"), onClick: () => moveElement(n, "up") },
-        { label: tr("下移一層"), onClick: () => moveElement(n, "down") },
-        { label: tr("置底"), onClick: () => moveElement(n, "bottom") },
+        { label: tr("置頂"), onClick: () => moveElements([n], "top") },
+        { label: tr("上移一層"), onClick: () => moveElements([n], "up") },
+        { label: tr("下移一層"), onClick: () => moveElements([n], "down") },
+        { label: tr("置底"), onClick: () => moveElements([n], "bottom") },
         { separator: true },
         ...aligns.slice(0, 3),
         { separator: true },
@@ -229,13 +388,65 @@ function showElementMenu(n: Konva.Shape | null, x: number, y: number): void {
   ]);
 }
 
+/** 多選（或群組）時的右鍵選單：對整批物件操作 */
+function showMultiMenu(x: number, y: number): void {
+  const sel = selection.slice();
+  const aligns = (["left", "hcenter", "right", "top", "vcenter", "bottom"] as Align[]).map((how): MenuItem => ({
+    label: tr("對齊標籤：{how}", { how: tr(ALIGN_LABEL[how]) }),
+    onClick: () => alignSelection(sel, how),
+  }));
+  const gids = new Set(sel.map((n) => (n.getAttr("groupId") as string | undefined) ?? ""));
+  const canGroup = sel.length >= 2 && !(gids.size === 1 && !gids.has(""));
+  showMenu(x, y, [
+    { label: tr("剪下"), hint: "Ctrl+X", onClick: () => cutNodes(sel) },
+    { label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNodes(sel) },
+    { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
+    { label: tr("重複"), hint: "Ctrl+D", onClick: () => void duplicateNodes(sel) },
+    { separator: true },
+    { label: tr("群組"), hint: "Ctrl+G", disabled: !canGroup, onClick: groupSelection },
+    { label: tr("取消群組"), hint: "Ctrl+Shift+G", disabled: !sel.some((n) => n.getAttr("groupId")), onClick: ungroupSelection },
+    { separator: true },
+    {
+      label: tr("排列"),
+      items: [
+        { label: tr("置頂"), onClick: () => moveElements(sel, "top") },
+        { label: tr("上移一層"), onClick: () => moveElements(sel, "up") },
+        { label: tr("下移一層"), onClick: () => moveElements(sel, "down") },
+        { label: tr("置底"), onClick: () => moveElements(sel, "bottom") },
+        { separator: true },
+        ...aligns.slice(0, 3),
+        { separator: true },
+        ...aligns.slice(3),
+      ],
+    },
+    { label: tr("鎖定"), onClick: () => { for (const n of sel) toggleLocked(n); } },
+    { label: tr("隱藏"), onClick: () => { for (const n of sel) toggleVisible(n); } },
+    { separator: true },
+    { label: tr("刪除"), hint: "Delete", onClick: () => removeNodes(sel) },
+  ]);
+}
+
+for (const [id, how] of [["align-left", "left"], ["align-center", "hcenter"], ["align-right", "right"]] as const) {
+  $(id).addEventListener("click", () => { if (selection.length) alignSelection(selection, how); });
+}
+$("group-btn").addEventListener("click", groupSelection);
+$("ungroup-btn").addEventListener("click", ungroupSelection);
+
 // ---------- 屬性面板 ----------
 const kindEls = () => document.querySelectorAll<HTMLElement>("[data-kinds]");
 
 function syncPanel(): void {
   const k = kindOf(selected);
   kindEls().forEach((el) => { el.hidden = !(k && el.dataset.kinds!.split(" ").includes(k)); });
-  $("no-selection").hidden = !!selected;
+  $("no-selection").hidden = selection.length > 0;
+  const multiInfo = $("multi-info");
+  multiInfo.hidden = selection.length < 2;
+  if (selection.length > 1) {
+    const gids = new Set(selection.map((n) => n.getAttr("groupId") as string | undefined));
+    multiInfo.textContent = gids.size === 1 && !gids.has(undefined)
+      ? tr("已選取一個群組（{n} 個物件）：可一起移動、縮放、對齊；要編輯單一物件請先「取消群組」", { n: selection.length })
+      : tr("已選取 {n} 個物件：可一起移動、縮放、對齊、複製或刪除；按 Ctrl+G 可組成群組", { n: selection.length });
+  }
   if (!selected || !k) return;
 
   const text = $<HTMLTextAreaElement>("prop-text");
@@ -519,12 +730,12 @@ function recordNow(): void {
 async function restoreSnapshot(s: string): Promise<void> {
   restoring = true;
   try {
-    const idx = selected ? elements().indexOf(selected) : -1;
+    const idxs = selection.map((n) => elements().indexOf(n)).filter((i) => i >= 0);
     for (const n of elements()) n.destroy();
     for (const d of JSON.parse(s) as ElementData[]) layer.add(await createElement(d));
     transformer.moveToTop();
     const els = elements();
-    select(idx >= 0 && idx < els.length ? els[idx] : null);
+    setSelection(idxs.filter((i) => i < els.length).map((i) => els[i]));
     lastSnap = snapshot();
     dirty = true;
     updateTplLabel();
@@ -725,21 +936,31 @@ const insertMenuItems = (): MenuItem[] => [
 ];
 
 function editMenuItems(): MenuItem[] {
+  const sel = selection.slice();
   const n = selected;
-  const locked = !!n?.getAttr("locked");
+  const none = sel.length === 0;
+  const gids = new Set(sel.map((x) => (x.getAttr("groupId") as string | undefined) ?? ""));
   return [
     { label: tr("復原"), hint: "Ctrl+Z", disabled: !canUndo(), onClick: () => void undo() },
     { label: tr("重做"), hint: "Ctrl+Y", disabled: !canRedo(), onClick: () => void redo() },
     { separator: true },
-    { label: tr("剪下"), hint: "Ctrl+X", disabled: !n || locked, onClick: () => n && cutNode(n) },
-    { label: tr("複製"), hint: "Ctrl+C", disabled: !n, onClick: () => n && copyNode(n) },
-    { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip, onClick: () => void pasteClip() },
-    { label: tr("重複"), hint: "Ctrl+D", disabled: !n || locked, onClick: () => n && void duplicateNode(n) },
+    { label: tr("剪下"), hint: "Ctrl+X", disabled: none, onClick: () => cutNodes(sel) },
+    { label: tr("複製"), hint: "Ctrl+C", disabled: none, onClick: () => copyNodes(sel) },
+    { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
+    { label: tr("重複"), hint: "Ctrl+D", disabled: none, onClick: () => void duplicateNodes(sel) },
     { separator: true },
-    { label: tr("刪除"), hint: "Delete", disabled: !n || locked, onClick: () => removeSelected() },
+    { label: tr("全選"), hint: "Ctrl+A", onClick: selectAll },
+    { label: tr("群組"), hint: "Ctrl+G", disabled: !(sel.length >= 2 && !(gids.size === 1 && !gids.has(""))), onClick: groupSelection },
+    { label: tr("取消群組"), hint: "Ctrl+Shift+G", disabled: !sel.some((x) => x.getAttr("groupId")), onClick: ungroupSelection },
+    { separator: true },
+    { label: tr("刪除"), hint: "Delete", disabled: none, onClick: () => removeSelected() },
     { separator: true },
     { label: tr("屬性…"), hint: "Alt+Enter", disabled: !n, onClick: () => n && openProps(n) },
   ];
+}
+
+function selectAll(): void {
+  setSelection(elements());
 }
 
 const sidePanel = (): HTMLElement => document.querySelector<HTMLElement>("aside.panel")!;
@@ -799,6 +1020,8 @@ const helpMenuItems = (): MenuItem[] => [
   { separator: true },
   { label: tr("檢查新版本"), onClick: () => void checkForUpdate() },
   { label: tr("新功能"), onClick: () => void showWhatsNew() },
+  { separator: true },
+  { label: tr("啟動時自動檢查更新"), hint: autoCheckEnabled() ? "✓" : "", onClick: () => { setAutoCheck(!autoCheckEnabled()); setStatus(autoCheckEnabled() ? tr("已開啟：啟動時自動檢查更新") : tr("已關閉：啟動時不再自動檢查更新"), "ok"); } },
 ];
 
 // ---------- 渲染 & 列印 ----------
@@ -1111,11 +1334,14 @@ new ResizeObserver(fitZoom).observe(document.querySelector(".canvas-wrap")!);
 initLayers({
   elements,
   selected: () => selected,
+  selection: () => selection,
   select,
+  setSelection,
   changed: () => { transformer.moveToTop(); transformer.forceUpdate(); layer.batchDraw(); markDirty(); },
   contextMenu: (n, x, y) => {
-    if (n.visible() && !n.getAttr("locked")) select(n);
-    showElementMenu(n, x, y);
+    if (n.visible() && !n.getAttr("locked") && !selection.includes(n)) select(n);
+    if (selection.length > 1 && selection.includes(n)) showMultiMenu(x, y);
+    else showElementMenu(n, x, y);
   },
 });
 initProps({
@@ -1269,6 +1495,7 @@ window.addEventListener("keydown", (e) => {
 initTheme($("theme-btn"));
 updateLangTag();
 void maybeShowWhatsNew();
+void autoCheckOnStartup();
 applyDom(); // 靜態的 index.html 文字換成目前語言（繁體中文時不會有任何變動）
 $("undo-btn").addEventListener("click", () => void undo());
 $("redo-btn").addEventListener("click", () => void redo());
@@ -1299,20 +1526,23 @@ window.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if ((e.ctrlKey || e.metaKey) && k === "z" && !e.shiftKey) { e.preventDefault(); void undo(); }
   else if ((e.ctrlKey || e.metaKey) && (k === "y" || (k === "z" && e.shiftKey))) { e.preventDefault(); void redo(); }
-  else if ((e.ctrlKey || e.metaKey) && k === "c" && selected) { e.preventDefault(); copyNode(selected); }
-  else if ((e.ctrlKey || e.metaKey) && k === "x" && selected) { e.preventDefault(); cutNode(selected); }
+  else if ((e.ctrlKey || e.metaKey) && k === "c" && selection.length) { e.preventDefault(); copyNodes(selection.slice()); }
+  else if ((e.ctrlKey || e.metaKey) && k === "x" && selection.length) { e.preventDefault(); cutNodes(selection.slice()); }
   else if ((e.ctrlKey || e.metaKey) && k === "v") { e.preventDefault(); void pasteClip(); }
-  else if ((e.ctrlKey || e.metaKey) && k === "d" && selected) { e.preventDefault(); void duplicateNode(selected); }
+  else if ((e.ctrlKey || e.metaKey) && k === "d" && selection.length) { e.preventDefault(); void duplicateNodes(selection.slice()); }
+  else if ((e.ctrlKey || e.metaKey) && k === "a") { e.preventDefault(); selectAll(); }
+  else if ((e.ctrlKey || e.metaKey) && k === "g" && !e.shiftKey) { e.preventDefault(); groupSelection(); }
+  else if ((e.ctrlKey || e.metaKey) && k === "g" && e.shiftKey) { e.preventDefault(); ungroupSelection(); }
   else if (e.altKey && e.key === "Enter" && selected) { e.preventDefault(); hideMenu(); openProps(selected); }
 });
 
 // 鍵盤：Delete 刪除、方向鍵微調（Shift 加大步距）
 window.addEventListener("keydown", (e) => {
-  if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement).tagName) || !selected || document.querySelector("dialog[open]")) return;
+  if (["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement).tagName) || !selection.length || document.querySelector("dialog[open]")) return;
   const step = e.shiftKey ? 8 : 1;
   const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
   if (e.key === "Delete") removeSelected();
-  else if (moves[e.key]) { selected.move({ x: moves[e.key][0], y: moves[e.key][1] }); markDirty(); }
+  else if (moves[e.key]) { for (const n of selection) n.move({ x: moves[e.key][0], y: moves[e.key][1] }); transformer.forceUpdate(); markDirty(); }
   else return;
   e.preventDefault();
 });
@@ -1321,6 +1551,10 @@ window.addEventListener("keydown", (e) => {
 if (import.meta.env.DEV) {
   (window as unknown as Record<string, unknown>).__lp = {
     i18n: { LOCALES, setLang, applyDom, t: tr, changeLang, detectLang },
+    selCount: () => selection.length,
+    groupIds: () => elements().map((n) => n.getAttr("groupId") ?? null),
+    selectIdx: (idxs: number[]) => { const els = elements(); setSelection(idxs.map((i) => els[i])); },
+    bboxOf: (i: number) => { const r = bbox(elements()[i], layer); return { x: r.x, y: r.y, w: r.width, h: r.height }; },
     anchor: (name: string) => transformer.findOne(`.${name}`)?.getAbsolutePosition(),
     node: () =>
       selected

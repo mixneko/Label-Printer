@@ -227,8 +227,15 @@ label.check { display: flex; align-items: center; gap: 6px; margin-top: 22px; co
 .settings-dlg label.inline-check, .panel label.inline-check { margin: 6px 0 10px; }
 #qr-info { margin: -2px 0 8px; line-height: 1.5; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.layer-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.layer-tools .btn { padding: 0 6px; flex: 1 1 auto; }
+/* 對齊列（3 顆）在清單上方、順序列（4 顆）在清單下方：各自等寬、單列不換行；放不下的文字以刪節號收起（滑鼠停留有完整提示） */
+.layer-tools { display: grid; gap: 6px; }
+#align-tools { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 8px; }
+#layer-tools { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 8px; }
+#group-tools { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 6px; }
+.layer-list li.grouped { box-shadow: inset -3px 0 0 var(--g); }
+.layer-list li.grouped.sel { box-shadow: inset 2px 0 0 var(--accent), inset -3px 0 0 var(--g); }
+.layer-tools .btn { min-width: 0; padding: 0 4px; gap: 3px; justify-content: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.layer-tools .btn .ic { flex: none; }
 
 /* 圖層清單 */
 .layer-list { list-style: none; margin: 0; padding: 2px; max-height: 230px; overflow: auto; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; }
@@ -411,3 +418,12 @@ details.help code { padding: 0 4px; background: color-mix(in srgb, var(--help-bo
 .whatsnew h3 { margin: 12px 0 4px; font-size: 13px; }
 .whatsnew h3:first-child { margin-top: 0; }
 .whatsnew ul { margin: 0; padding-left: 20px; line-height: 1.6; font-size: 13px; }
+
+/* 英文／西文／德文的按鈕文字太長，三～四等分放不下：圖層面板的對齊與順序按鈕只留圖示（title 有完整說明）；日文／韓文只有四等分的順序列放不下 */
+:lang(en) .layer-tools .btn, :lang(es) .layer-tools .btn, :lang(de) .layer-tools .btn,
+:lang(ja) #layer-tools .btn, :lang(ko) #layer-tools .btn,
+:lang(en) #group-tools .btn, :lang(es) #group-tools .btn, :lang(de) #group-tools .btn { font-size: 0; gap: 0; }
+
+/* 自訂的滑鼠停留說明（src/tooltip.ts）：放在最上層（popover），所以在對話框之上也看得到 */
+#tooltip { position: fixed; inset: auto; margin: 0; padding: 6px 10px; max-width: 320px; border: 0; border-radius: 6px; pointer-events: none;
+  color: #fff; background: #1f2933; font: 12.5px/1.45 var(--font, system-ui, sans-serif); box-shadow: 0 4px 14px rgba(0, 0, 0, .3); white-space: normal; overflow-wrap: anywhere; }

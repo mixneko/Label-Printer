@@ -2,7 +2,7 @@
   "name": "label-printer",
   "private": true,
   "license": "MIT",
-  "version": "0.9.8",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,6 +19,7 @@
     "@tauri-apps/plugin-updater": "^2.14.1",
     "jsbarcode": "^3.11.6",
     "konva": "^9.3.0",
+    "lucide-static": "^1.77.0",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {

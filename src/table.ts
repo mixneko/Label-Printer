@@ -1,7 +1,7 @@
 // 資料表面板：選擇資料來源（Excel / CSV），勾選要列印的列（勾幾列就印幾張）。
 // 欄位標題即 {{欄位}} 變數名稱。
 
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./ipc";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { Raw, RawRow, Row } from "./template";
 import { t } from "./i18n";
@@ -24,6 +24,8 @@ interface TableData {
   styles?: (CellStyle | null)[][];
   /** 與 rows 同樣大小的原始值（Excel 的數字／日期儲存格）；CSV 等沒有這個欄位。供「欄位格式」重新格式化用 */
   raw?: (Raw | null)[][];
+  /** 來源種類：資料庫為 "db"（「工作表」改稱「資料表」）；Excel、CSV 沒有這個欄位 */
+  kind?: "db";
 }
 
 export interface TableHandlers {
@@ -59,6 +61,8 @@ export function tableHeaders(): string[] {
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 let path = "";
+/** 畫面上顯示的來源名稱（資料庫連線不顯示整串連線字串，也不能出現密碼）；空字串＝用檔名 */
+let sourceLabel = "";
 let data: TableData | null = null;
 const checked = new Set<number>();
 let active = -1;
@@ -99,14 +103,39 @@ async function load(sheet?: string): Promise<void> {
   render();
 }
 
+/** 以指定的來源載入（資料庫連線對話框使用）：path 可以是資料庫檔案，或 `odbc:` 開頭的連線字串；sheet 可以是資料表名或 `sql:` 查詢 */
+export async function loadSource(p: string, sheet?: string, label = ""): Promise<void> {
+  const prev = { path, label: sourceLabel };
+  path = p;
+  sourceLabel = label;
+  try {
+    await load(sheet);
+  } catch (e) {
+    path = prev.path;
+    sourceLabel = prev.label;
+    throw e;
+  }
+  h.onStatus(t("已載入資料來源：{n} 筆資料，勾選要列印的列", { n: printableCount() }), "ok");
+}
+
+const FILE_EXTS = {
+  tables: ["xlsx", "xlsm", "xls", "csv"],
+  databases: ["db", "sqlite", "sqlite3", "db3", "mdb", "accdb"],
+};
+
 async function importFile(): Promise<void> {
   try {
     const picked = await open({
       multiple: false,
-      filters: [{ name: "Excel / CSV", extensions: ["xlsx", "xlsm", "xls", "csv"] }],
+      filters: [
+        { name: t("資料來源（Excel、CSV、資料庫）"), extensions: [...FILE_EXTS.tables, ...FILE_EXTS.databases] },
+        { name: "Excel / CSV", extensions: FILE_EXTS.tables },
+        { name: t("資料庫"), extensions: FILE_EXTS.databases },
+      ],
     });
     if (typeof picked !== "string") return;
     path = picked;
+    sourceLabel = "";
     await load();
     h.onStatus(t("已載入資料來源：{n} 筆資料，勾選要列印的列", { n: printableCount() }), "ok");
   } catch (e) {
@@ -132,7 +161,8 @@ function render(): void {
     return;
   }
   panel.hidden = false;
-  $("data-file").textContent = path.split(/[\\/]/).pop() ?? path;
+  $("data-file").textContent = sourceLabel || (path.split(/[\\/]/).pop() ?? path);
+  $("data-sheet-label").textContent = data.kind === "db" ? t("資料表") : t("工作表");
 
   const sel = $<HTMLSelectElement>("data-sheet");
   sel.replaceChildren(...data.sheets.map((s) => new Option(s, s)));

@@ -1,6 +1,6 @@
 // 回歸測試：右鍵選單與「屬性」對話框（複製貼上、位置/大小/對齊、鎖定大小、鎖定）。
 // 需要開發模式的除錯介面（window.__lp）。用法（先在另一個視窗執行 `npx vite --port 1420 --strictPort`）：
-//   node scripts/ui-menu.mjs [輸出資料夾=.tools] [標籤=samples/範例標籤.lpxl]
+//   node scripts/ui-menu.mjs [輸出資料夾=.tools] [標籤=samples/sample-label.lpxl]
 // 結果以 PASS / FAIL 列出；截圖放在「輸出資料夾\shots\menu-*.png」。有任何 FAIL 時結束代碼為 1。
 import { spawn } from "node:child_process";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -8,7 +8,7 @@ import { resolve } from "node:path";
 import { devServer, freePort } from "./_dev-server.mjs";
 
 const SCRATCH = resolve(process.argv[2] ?? ".tools");
-const TPL = readFileSync(process.argv[3] ?? "samples/範例標籤.lpxl", "utf8");
+const TPL = readFileSync(process.argv[3] ?? "samples/sample-label.lpxl", "utf8");
 const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const OUT = `${SCRATCH}\\shots`; mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -121,17 +121,21 @@ check("剪下 → 物件數 -1", (await count()) === N0, `${await count()}`);
 // 空白處：在標籤範圍內找一個沒有物件的點（範例標籤內容變動時不必改座標）
 const so = await origin();
 const sz = JSON.parse(await ev("JSON.stringify((() => { const r = document.querySelector('#stage .konvajs-content').getBoundingClientRect(); return { w: r.width, h: r.height }; })())"));
-let blankTexts = [];
+let blankTexts = [], blankPt = null;
 for (const fy of [0.97, 0.9, 0.5, 0.1]) for (const fx of [0.98, 0.5, 0.02, 0.75, 0.25]) {
   await rightClickAt(so.x + sz.w * fx, so.y + sz.h * fy);
   blankTexts = await menuTexts();
-  if (JSON.stringify(blankTexts) === JSON.stringify(["貼上"])) break;
+  if (JSON.stringify(blankTexts) === JSON.stringify(["貼上", "屬性"])) { blankPt = { x: so.x + sz.w * fx, y: so.y + sz.h * fy }; break; }
   await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))");
 }
-check("空白處右鍵只有「貼上」", JSON.stringify(blankTexts) === JSON.stringify(["貼上"]), blankTexts.join("、"));
+check("空白處右鍵有「貼上」「屬性」", JSON.stringify(blankTexts) === JSON.stringify(["貼上", "屬性"]), blankTexts.join("、"));
 await clickMenu("貼上");
 check("從空白處貼上 → 物件數 +1", (await count()) === N0 + 1);
 await clickBtn("#delete");
+await rightClickAt(blankPt.x, blankPt.y);
+await clickMenu("屬性");
+check("空白處「屬性」開啟紙張與標籤尺寸視窗", await ev("document.getElementById('dlg-paper').open"));
+await ev("document.getElementById('dlg-paper').close()");
 
 // ---- 3. 屬性：位置 ----
 await rightClickElement(1); // 分隔線（矩形）

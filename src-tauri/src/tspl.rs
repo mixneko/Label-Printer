@@ -17,9 +17,9 @@ fn de_base64<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum NativeCode {
     /// BARCODE x,y,"code",height,readable,0,narrow,wide,"content"
-    Barcode { x: i32, y: i32, code: String, height: u32, readable: bool, narrow: u32, wide: u32, content: String },
-    /// QRCODE x,y,ecc,cell,A,0,"content"
-    Qr { x: i32, y: i32, ecc: String, cell: u32, content: String },
+    Barcode { x: i32, y: i32, code: String, height: u32, readable: bool, narrow: u32, wide: u32, content: String, #[serde(default)] h: u32 },
+    /// QRCODE x,y,ecc,cell,A,0,M2,S7,"content"（M2＝QR Model 2；不指定時舊韌體用 Model 1，手機掃不出來）
+    Qr { x: i32, y: i32, ecc: String, cell: u32, content: String, #[serde(default)] h: u32 },
 }
 
 /// 允許的原生條碼類型（TSPL2 BARCODE 的 code type）；不在清單內的一律拒絕，避免把任意文字塞進指令
@@ -41,7 +41,7 @@ impl NativeCode {
     fn command(&self, dx: u32, dy: u32) -> Result<String, String> {
         let at = |v: i32, d: u32| (v.max(0) as u32).saturating_add(d);
         match self {
-            NativeCode::Barcode { x, y, code, height, readable, narrow, wide, content } => {
+            NativeCode::Barcode { x, y, code, height, readable, narrow, wide, content, .. } => {
                 if !BARCODE_TYPES.contains(&code.as_str()) {
                     return Err(format!("不支援的原生條碼類型：{code}"));
                 }
@@ -51,11 +51,11 @@ impl NativeCode {
                     (*narrow).clamp(1, 10), (*wide).clamp(1, 30), quote(content)?
                 ))
             }
-            NativeCode::Qr { x, y, ecc, cell, content } => {
+            NativeCode::Qr { x, y, ecc, cell, content, .. } => {
                 if !matches!(ecc.as_str(), "L" | "M" | "Q" | "H") {
                     return Err(format!("不支援的 QR 容錯等級：{ecc}"));
                 }
-                Ok(format!("QRCODE {},{},{},{},A,0,\"{}\"", at(*x, dx), at(*y, dy), ecc, (*cell).clamp(1, 10), quote(content)?))
+                Ok(format!("QRCODE {},{},{},{},A,0,M2,S7,\"{}\"", at(*x, dx), at(*y, dy), ecc, (*cell).clamp(1, 10), quote(content)?))
             }
         }
     }
@@ -91,6 +91,13 @@ pub struct PrintJob {
     /// 改由印表機原生指令列印的條碼／QR（這些物件不會出現在 bitmap 裡）；沒有就是空的
     #[serde(default)]
     pub natives: Vec<NativeCode>,
+    /// 印表機語言代碼（`langs::LANGUAGES`）；沒有就是 TSPL（舊版前端與既有行為）
+    #[serde(default = "default_lang")]
+    pub lang: String,
+}
+
+fn default_lang() -> String {
+    "tspl".into()
 }
 
 fn default_tear() -> bool {
@@ -105,6 +112,16 @@ pub fn build(job: &PrintJob) -> Result<Vec<u8>, String> {
     }
     if job.copies == 0 {
         return Err("份數必須至少為 1".into());
+    }
+    if job.lang != "tspl" {
+        return match job.lang.as_str() {
+            "zpl" => crate::langs::zpl(job),
+            "epl" => crate::langs::epl(job),
+            "cpcl" => crate::langs::cpcl(job),
+            "dpl" => crate::langs::dpl(job),
+            "sbpl" => crate::langs::sbpl(job),
+            other => Err(format!("不支援的印表機語言：{other}")),
+        };
     }
 
     // 印表機的記憶會保留上一次工作（例如 BarTender 或驅動）留下的設定，所以出紙方式要每次明確指定
@@ -191,7 +208,7 @@ mod tests {
             paper_w_mm: 62.5, paper_h_mm: 30.0, gap_mm: 3.0,
             offset_x_dots: 10, offset_y_dots: 0,
             width_px: 9, height_px: 2, // 每列 2 bytes
-            bitmap, copies: 3, density: 8, speed: 4, tear: true, offset_mm: 0.0, natives: vec![],
+            bitmap, copies: 3, density: 8, speed: 4, tear: true, offset_mm: 0.0, natives: vec![], lang: "tspl".into(),
         }
     }
 
@@ -249,14 +266,14 @@ mod tests {
     fn native_codes_are_appended_after_the_bitmap_with_paper_offset() {
         let mut j = job(vec![0xFF, 0x80, 0x00, 0x00]);
         j.natives = vec![
-            NativeCode::Barcode { x: 20, y: 30, code: "128".into(), height: 80, readable: true, narrow: 2, wide: 4, content: "SN-0001".into() },
-            NativeCode::Qr { x: 5, y: 6, ecc: "M".into(), cell: 3, content: "https://example.com/a".into() },
+            NativeCode::Barcode { x: 20, y: 30, code: "128".into(), height: 80, readable: true, narrow: 2, wide: 4, content: "SN-0001".into(), h: 0 },
+            NativeCode::Qr { x: 5, y: 6, ecc: "M".into(), cell: 3, content: "https://example.com/a".into(), h: 0 },
         ];
         let out = build(&j).unwrap();
         let s = String::from_utf8_lossy(&out).into_owned();
         // 位移 offset_x_dots = 10、offset_y_dots = 0 要加進座標
         assert!(s.contains("\r\nBARCODE 30,30,\"128\",80,1,0,2,4,\"SN-0001\"\r\n"), "{s:?}");
-        assert!(s.contains("\r\nQRCODE 15,6,M,3,A,0,\"https://example.com/a\"\r\n"), "{s:?}");
+        assert!(s.contains("\r\nQRCODE 15,6,M,3,A,0,M2,S7,\"https://example.com/a\"\r\n"), "{s:?}");
         let bitmap_at = s.find("BITMAP").unwrap();
         assert!(s.find("BARCODE").unwrap() > bitmap_at && s.find("QRCODE").unwrap() < s.find("PRINT 3,1").unwrap());
         assert!(s.ends_with("PRINT 3,1\r\n"));
@@ -271,16 +288,16 @@ mod tests {
 
     #[test]
     fn native_codes_are_validated_and_escaped() {
-        let bc = |code: &str, content: &str| NativeCode::Barcode { x: 0, y: 0, code: code.into(), height: 50, readable: false, narrow: 2, wide: 2, content: content.into() };
+        let bc = |code: &str, content: &str| NativeCode::Barcode { x: 0, y: 0, code: code.into(), height: 50, readable: false, narrow: 2, wide: 2, content: content.into(), h: 0 };
         assert!(bc("128", "中文").command(0, 0).is_err(), "非 ASCII 要拒絕");
         assert!(bc("128", "").command(0, 0).is_err(), "空內容要拒絕");
         assert!(bc("128\"; DELETE", "A").command(0, 0).is_err(), "未知的條碼類型要拒絕");
         assert!(bc("128", "a\nb").command(0, 0).is_err(), "控制字元要拒絕");
         assert!(bc("39", "A\"B").command(0, 0).unwrap().ends_with("\"A\\\"B\""), "雙引號要跳脫");
-        assert!(NativeCode::Qr { x: 0, y: 0, ecc: "X".into(), cell: 3, content: "a".into() }.command(0, 0).is_err());
+        assert!(NativeCode::Qr { x: 0, y: 0, ecc: "X".into(), cell: 3, content: "a".into(), h: 0 }.command(0, 0).is_err());
         // 負座標夾在 0；cell / narrow 夾在合理範圍
-        let c = NativeCode::Qr { x: -5, y: 2, ecc: "H".into(), cell: 99, content: "a".into() }.command(4, 0).unwrap();
-        assert_eq!(c, "QRCODE 4,2,H,10,A,0,\"a\"");
+        let c = NativeCode::Qr { x: -5, y: 2, ecc: "H".into(), cell: 99, content: "a".into(), h: 0 }.command(4, 0).unwrap();
+        assert_eq!(c, "QRCODE 4,2,H,10,A,0,M2,S7,\"a\"");
     }
 
     #[test]
@@ -292,6 +309,26 @@ mod tests {
         let j: PrintJob = serde_json::from_str(json).unwrap();
         assert_eq!(j.natives.len(), 2);
         assert!(matches!(&j.natives[1], NativeCode::Qr { cell: 3, .. }));
+    }
+
+    #[test]
+    fn other_languages_dispatch_and_reject_natives_and_unknown() {
+        for (lang, marker) in [("zpl", "^XA"), ("epl", "GW"), ("cpcl", "CG "), ("dpl", "1Y11000"), ("sbpl", "GH")] {
+            let mut j = job(vec![0xFF, 0x80, 0x00, 0x00]);
+            j.lang = lang.into();
+            let s = String::from_utf8_lossy(&build(&j).unwrap()).into_owned();
+            assert!(s.contains(marker), "{lang}: {s:?}");
+            assert!(!s.contains("BITMAP"), "{lang} 不應出現 TSPL 指令");
+        }
+        // 沒有 QR 原生指令的語言（EPL2、SBPL）收到 QR 要明確拒絕；ZPL、CPCL、DPL 則支援
+        let mut j = job(vec![0; 4]);
+        j.lang = "sbpl".into();
+        j.natives = vec![NativeCode::Qr { x: 0, y: 0, ecc: "M".into(), cell: 3, content: "a".into(), h: 0 }];
+        assert!(build(&j).is_err());
+        j.natives.clear();
+        j.lang = "nope".into();
+        assert!(build(&j).is_err());
+        assert!(serde_json::from_str::<PrintJob>(r#"{"paperWmm":1,"paperHmm":1,"gapMm":0,"offsetXDots":0,"offsetYDots":0,"widthPx":8,"heightPx":1,"bitmap":"AA==","copies":1,"density":1,"speed":1,"lang":"zpl"}"#).unwrap().lang == "zpl");
     }
 
     #[test]

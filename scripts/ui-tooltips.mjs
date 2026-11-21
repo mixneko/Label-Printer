@@ -44,21 +44,21 @@ await ev("document.getElementById('align-left').removeAttribute('title')");
 check("檢查有效：拿掉對齊按鈕的說明會被抓到", (await audit()).includes("align-left"));
 // ---- 自訂提示：真實滑鼠停在按鈕上 → 出現說明；移開 → 消失且 title 還原 ----
 await ev("window.__lp.i18n.changeLang('zh-TW')"); await sleep(300);
-const c = await ev(`JSON.stringify((() => { const r = document.getElementById('add-rect').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })())`).then(JSON.parse);
+const c = await ev(`JSON.stringify((() => { const r = document.getElementById('add-barcode').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })())`).then(JSON.parse);
 await t.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 5 }); await sleep(100);
 await t.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: c.x, y: c.y }); await sleep(100);
 check("剛移上去還沒出現（有延遲）", !(await ev("document.getElementById('tooltip')?.matches(':popover-open') ?? false")));
 await sleep(600);
-check("停留後出現說明，內容是 title（新增矩形）", (await ev("document.getElementById('tooltip')?.matches(':popover-open')")) && (await ev("document.getElementById('tooltip').textContent")) === "新增矩形");
-check("顯示期間原生 title 暫時收起（避免重複出現）", (await ev("document.getElementById('add-rect').hasAttribute('title')")) === false);
+check("停留後出現說明，內容是 title（新增條碼）", (await ev("document.getElementById('tooltip')?.matches(':popover-open')")) && (await ev("document.getElementById('tooltip').textContent")) === "新增條碼");
+check("顯示期間原生 title 暫時收起（避免重複出現）", (await ev("document.getElementById('add-barcode').hasAttribute('title')")) === false);
 const box = await ev("JSON.stringify(document.getElementById('tooltip').getBoundingClientRect())").then(JSON.parse);
 check("提示在視窗內、在按鈕下方", box.left >= 0 && box.right <= 1280 && box.top > c.y, JSON.stringify(box));
 await t.shot("tooltip");
 await t.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 400 }); await sleep(200);
-check("移開後提示消失、title 還原", !(await ev("document.getElementById('tooltip').matches(':popover-open')")) && (await ev("document.getElementById('add-rect').getAttribute('title')")) === "新增矩形");
+check("移開後提示消失、title 還原", !(await ev("document.getElementById('tooltip').matches(':popover-open')")) && (await ev("document.getElementById('add-barcode').getAttribute('title')")) === "新增條碼");
 // 按下去也要立刻收起
 await t.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: c.x, y: c.y }); await sleep(700);
 await t.send("Input.dispatchMouseEvent", { type: "mousePressed", x: c.x, y: c.y, button: "left", buttons: 1, clickCount: 1 });
 await t.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: c.x, y: c.y, button: "left", buttons: 0, clickCount: 1 }); await sleep(200);
-check("按下按鈕 → 提示立刻收起、title 還原", !(await ev("document.getElementById('tooltip').matches(':popover-open')")) && (await ev("document.getElementById('add-rect').getAttribute('title')")) === "新增矩形");
+check("按下按鈕 → 提示立刻收起、title 還原", !(await ev("document.getElementById('tooltip').matches(':popover-open')")) && (await ev("document.getElementById('add-barcode').getAttribute('title')")) === "新增條碼");
 await t.finish();

@@ -73,6 +73,8 @@ const rows = entries.map((e) => ({ ...e, ref: refOf(e.text) }));
 let out = "Label Printer 第三方授權聲明\n";
 out += "本程式使用下列開放原始碼套件。各套件的版權屬於其作者，依其授權條款散布。\n";
 out += `（共 ${rows.length} 個；由 scripts/gen-licenses.mjs 自動產生，內容為執行時期會打包進程式的套件。）\n\n`;
+out += "附註：rusqlite／libsqlite3-sys 內含 SQLite 的 C 原始碼（用於讀取 SQLite 資料庫）。SQLite 屬於公有領域（Public Domain），無版權與授權限制，詳見 https://www.sqlite.org/copyright.html 。\n\n";
+out += "附註：介面圖示取自 Lucide（https://lucide.dev ，ISC 授權；部分圖形源自 Feather，MIT 授權），由 lucide-static 套件的 SVG 檔取出並內嵌於程式；授權全文見下方 lucide-static 一項。\n\n";
 out += "========== 套件清單 ==========\n\n";
 for (const r of rows) {
   out += `${r.name} ${r.version}  [${r.eco === "npm" ? "前端" : "Rust"}]\n  授權：${r.license}\n`;

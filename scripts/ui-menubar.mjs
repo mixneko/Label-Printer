@@ -87,7 +87,7 @@ for (const [k, first] of alts) {
 
 // 檢視：側邊面板顯示／隱藏
 await click("menu-view");
-check("「檢視」選單：預覽列印、對齊線（✓）、側邊面板（✓）", JSON.stringify((await items()).filter((i) => !i.sep).map((i) => i.t)) === JSON.stringify(["預覽列印Ctrl+P", "對齊線（拖曳時吸附）✓", "側邊面板✓"]), JSON.stringify((await items()).map((i) => i.t)));
+check("「檢視」選單：預覽列印、放大縮小、對齊線（✓）、側邊面板（✓）", JSON.stringify((await items()).filter((i) => !i.sep).map((i) => i.t)) === JSON.stringify(["預覽列印Ctrl+P", "放大Ctrl++", "縮小Ctrl+-", "符合視窗Ctrl+0", "實際大小 (100%)Ctrl+1", "對齊線（拖曳時吸附）✓", "側邊面板✓"]), JSON.stringify((await items()).map((i) => i.t)));
 await pick("側邊面板");
 check("取消勾選 → 側邊面板隱藏", await ev("document.querySelector('aside.panel').hidden"));
 await click("menu-view"); await pick("側邊面板");
@@ -137,7 +137,7 @@ await click("file-menu");
 check("「檔案」選單不含「產生校正標籤」", !(await labels()).some((l) => l.includes("校正")), JSON.stringify(await labels()));
 await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))"); await sleep(100);
 await click("help-menu");
-check("「說明」選單：關於、第三方授權聲明、檢查新版本、新功能、啟動時自動檢查更新（預設打勾）", JSON.stringify(await labels()) === JSON.stringify(["關於 Label Printer", "第三方授權聲明", "檢查新版本", "新功能", "啟動時自動檢查更新✓"]));
+check("「說明」選單：關於、第三方授權聲明、檢查新版本、新功能、啟動時顯示歡迎視窗、啟動時自動檢查更新（預設打勾）", JSON.stringify(await labels()) === JSON.stringify(["關於 Label Printer", "第三方授權聲明", "檢查新版本", "新功能", "啟動時顯示歡迎視窗✓", "啟動時自動檢查更新✓"]));
 await t.shot("1-bar");
 await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))"); await sleep(100);
 

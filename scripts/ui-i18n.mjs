@@ -15,7 +15,8 @@ const menuLabels = (id) => ev(`(async () => { document.getElementById('${id}').c
 check("預設語言是繁體中文，畫面文字維持原文", (await txt("file-menu")) === "檔案(F)" && (await txt("tpl-name")) === "未命名標籤");
 check("<html lang> 是 zh-TW", (await ev("document.documentElement.lang")) === "zh-TW");
 const langs = await menuLabels("lang-btn");
-check("功能表列右側的地球按鈕直接列出七種語言（自己的文字），目前語言打勾", langs.length === 7 && langs[0].startsWith("繁體中文") && langs[0].includes("✓") && langs.includes("한국어"), JSON.stringify(langs));
+check("功能表列右側的地球按鈕直接列出七種語言（自己的文字），目前語言打勾", langs.length === 7 && langs.find((l) => l.startsWith("繁體中文")).includes("✓") && langs.includes("한국어"), JSON.stringify(langs));
+check("語言順序與安裝程式一致：Deutsch、English、Español、简体中文、繁體中文、日本語、한국어", JSON.stringify(langs.map((l) => l.replace(/\s*✓/, ""))) === JSON.stringify(["Deutsch", "English", "Español", "简体中文", "繁體中文", "日本語", "한국어"]), JSON.stringify(langs));
 check("地球按鈕顯示目前語言簡稱，切換後更新", (await ev("document.querySelector('#lang-btn .lang-tag').textContent")) === "繁");
 
 await lang("en");

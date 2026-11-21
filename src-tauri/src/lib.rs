@@ -1,4 +1,7 @@
+mod dbsource;
 mod fonts;
+mod langs;
+mod netdb;
 mod numfmt;
 mod printer;
 mod sheet;
@@ -26,6 +29,23 @@ async fn list_printers() -> Result<Vec<String>, String> {
         .map_err(|e| e.to_string())?
 }
 
+/// 依 Windows 驅動程式名稱猜印表機語言。回傳 `{ lang, driver }`：猜不出來時 lang 為 null。
+#[derive(serde::Serialize)]
+struct DetectedLang {
+    lang: Option<&'static str>,
+    driver: String,
+}
+
+#[tauri::command]
+async fn detect_printer_language(name: String) -> Result<DetectedLang, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let driver = spool::driver_name(&name)?;
+        Ok(DetectedLang { lang: langs::detect(&driver, &name), driver })
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 /// 列出 Windows 已安裝的字型家族。
 #[tauri::command]
 async fn list_fonts() -> Result<Vec<String>, String> {
@@ -38,6 +58,14 @@ async fn list_fonts() -> Result<Vec<String>, String> {
 #[tauri::command]
 async fn read_table(path: String, sheet: Option<String>) -> Result<sheet::TableData, String> {
     tauri::async_runtime::spawn_blocking(move || sheet::read_table(&path, sheet.as_deref()))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// 這台電腦的 ODBC 驅動程式與已設定的資料來源名稱（資料庫連線對話框的選單）。
+#[tauri::command]
+async fn list_odbc_sources() -> Result<dbsource::OdbcSources, String> {
+    tauri::async_runtime::spawn_blocking(dbsource::list_sources)
         .await
         .map_err(|e| e.to_string())?
 }
@@ -127,6 +155,14 @@ fn write_text_file(path: String, content: String) -> Result<(), String> {
     std::fs::write(&path, content).map_err(|e| format!("寫入檔案失敗：{e}"))
 }
 
+/// 寫入二進位檔（例如匯出的 PDF）；內容以 base64 傳入。
+#[tauri::command]
+fn write_binary_file(path: String, data: String) -> Result<(), String> {
+    use base64::Engine;
+    let bytes = base64::engine::general_purpose::STANDARD.decode(data).map_err(|e| format!("資料格式錯誤：{e}"))?;
+    std::fs::write(&path, bytes).map_err(|e| format!("寫入檔案失敗：{e}"))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -136,11 +172,14 @@ pub fn run() {
             print_labels,
             open_url,
             list_printers,
+            detect_printer_language,
             list_fonts,
             read_table,
+            list_odbc_sources,
             format_values,
             read_text_file,
             write_text_file,
+            write_binary_file,
             path_exists,
             startup_file,
             is_installed

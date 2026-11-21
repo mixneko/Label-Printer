@@ -66,14 +66,16 @@ function Invoke-Api([string]$Method, [string]$Url, $Body = $null) {
 }
 
 # 建立 Release；已存在（409）則更新說明並清掉舊附件
-$r = Invoke-Api POST "$api/releases" @{ tag_name = $Tag; name = $Tag; body = $notes }
+# 版本號帶預發行後綴（例如 v1.0.0-a）的標成「預發行」，不會被當成最新正式版
+$pre = $Tag -match '-'
+$r = Invoke-Api POST "$api/releases" @{ tag_name = $Tag; name = $Tag; body = $notes; prerelease = $pre }
 if ($r.Code -eq '201') {
     $release = $r.Json | ConvertFrom-Json
 } elseif ($r.Code -eq '409') {
     $got = Invoke-Api GET "$api/releases/tags/$Tag"
     if ($got.Code -ne '200') { throw "讀取既有 Release 失敗（HTTP $($got.Code)）" }
     $release = $got.Json | ConvertFrom-Json
-    $upd = Invoke-Api PATCH "$api/releases/$($release.id)" @{ name = $Tag; body = $notes }
+    $upd = Invoke-Api PATCH "$api/releases/$($release.id)" @{ name = $Tag; body = $notes; prerelease = $pre }
     if ($upd.Code -ne '200') { throw "更新 Release 說明失敗（HTTP $($upd.Code))：$(Get-Brief $upd.Json)" }
     foreach ($a in $release.assets) {
         Write-Host "移除舊附件 $($a.name)"

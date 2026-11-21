@@ -70,6 +70,7 @@ for (const [lang, table] of Object.entries(LOCALES)) {
   const extra = Object.keys(table).filter((k) => !keys.has(k));
   const badPh = Object.entries(table).filter(([k, v]) => keys.has(k) && ph(k) !== ph(v));
   console.log(`${lang}：已翻 ${keys.size - missing.length} / ${keys.size}，缺 ${missing.length}，多餘 ${extra.length}，佔位不一致 ${badPh.length}`);
+  if (process.argv.includes("--missing") && lang === "en") missing.forEach((k) => console.log(`   缺：${k}`));
   extra.slice(0, 10).forEach((k) => console.log(`   多餘：${k}`));
   badPh.slice(0, 10).forEach(([k, v]) => console.log(`   佔位不一致：${k}  →  ${v}`));
   if (extra.length || badPh.length) fail = true;

@@ -8,13 +8,20 @@ src-tauri/target/
 # samples/ 採「白名單」：只有下面明確列出的虛構範例會被追蹤。
 # 其他放進 samples/ 的檔案（例如使用者自己的真實標籤與資料）一律自動忽略，不會被提交，也不用在這裡寫出名稱。
 samples/*
-!samples/範例標籤.lpxl
-!samples/範例貨品清單.csv
-!samples/商品清單.xlsx
-!samples/商品清單-big5.csv
+!samples/sample-label.lpxl
+!samples/sample-items.csv
+!samples/sample-items.xlsx
+!samples/sample-items-big5.csv
 
-# 本機用的筆記檔，不納入版本控制
+# 本機的交接與開發筆記（不納入版本庫）
 AGENTS.md
 
-# 本機用的筆記檔，不納入版本控制
+# 本機的交接與開發筆記（不納入版本庫）
 避雷清單.md
+
+# README 只用到 editor／data／preview／sheet／printer 五張（make-readme-shots 會多產生幾張，不追蹤）
+docs/images/*/db.png
+docs/images/*/menu.png
+docs/images/*/setup.png
+docs/images/*/settings.png
+docs/images/*/calibration.png

@@ -7,7 +7,7 @@
  * 「新功能」：更新後第一次開啟自動顯示一次（記住上次看過的版本），之後可從「說明 → 新功能」再看。
  */
 import { getVersion } from "@tauri-apps/api/app";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./ipc";
 import { check as checkUpdater, type Update } from "@tauri-apps/plugin-updater";
 import { N, t } from "./i18n";
 
@@ -15,15 +15,25 @@ const REPO = "mixneko/Label-Printer";
 const API = `https://api.github.com/repos/${REPO}/releases/latest`;
 const SEEN_KEY = "label-printer.whatsnew-seen";
 
-/** 版本比較（1.2.3 形式；多出的段視為 0）。a>b 回傳正數。 */
+/**
+ * 版本比較（1.2.3 形式；多出的段視為 0）。a>b 回傳正數。
+ * 支援預發行後綴（1.0.0-a、1.0.0-b…）：數字相同時，有後綴的比沒有後綴的舊，兩個後綴則依文字順序比（a < b）。
+ */
 export function compareVersions(a: string, b: string): number {
-  const pa = a.replace(/^v/i, "").split(".").map((x) => parseInt(x, 10) || 0);
-  const pb = b.replace(/^v/i, "").split(".").map((x) => parseInt(x, 10) || 0);
+  const split = (v: string): [number[], string] => {
+    const [core, ...pre] = v.replace(/^v/i, "").split("-");
+    return [core.split(".").map((x) => parseInt(x, 10) || 0), pre.join("-")];
+  };
+  const [pa, sa] = split(a);
+  const [pb, sb] = split(b);
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
     const d = (pa[i] ?? 0) - (pb[i] ?? 0);
     if (d) return d;
   }
-  return 0;
+  if (sa === sb) return 0;
+  if (!sa) return 1;
+  if (!sb) return -1;
+  return sa < sb ? -1 : 1;
 }
 
 async function currentVersion(): Promise<string> {
@@ -143,6 +153,22 @@ document.getElementById("update-close")!.addEventListener("click", () => dlg("up
 // ---------- 新功能 ----------
 /** 由新到舊。每個版本一組說明；文字用 N 標記進翻譯表，顯示時才 t()。 */
 const NOTES: Array<{ version: string; items: string[] }> = [
+  { version: "1.0.0", items: [
+    N("新增多種標籤機語言：除了 TSPL，也支援 ZPL、EPL2、CPCL、DPL、SBPL；從 Windows 選印表機時會依驅動程式自動偵測語言，直連 TCP 則自己選擇（TSPL 以外為實驗性質，尚未在實機驗證）"),
+    N("ZPL、EPL2、CPCL、DPL、SBPL 也能使用印表機原生指令列印條碼與 QR Code（在物件屬性勾選，會標示「實驗中」，尚未在實機驗證，歡迎回報結果）；EPL2 與 SBPL 沒有 QR 指令，仍用點陣"),
+    N("新增貼紙紙／A4 排版列印（「列印」「預覽列印」旁的 ▾）：在 A4 或 Letter 上排出多欄多列的標籤，可印輔助裁切線與避開印表機印不到的邊緣，匯出 PDF 或直接列印（實驗性質，尚未在實機驗證）"),
+    N("新增資料庫當資料來源：SQLite 與 Access 檔案（在「選擇資料來源」直接選），以及任何有 ODBC 驅動程式的資料庫（「選擇資料來源」旁的 ▾ → 連線到資料庫…），可選填 SELECT 查詢；一律唯讀（SQLite 已用實際檔案測試，Access 與其他資料庫為實驗性質）"),
+    N("新安裝時會先跳出「首次設定」，請你選擇列印標籤用的印表機與標籤語言（不再自動替你選）；選到一般印表機（事務機、PDF 等不是標籤機）時，「列印」與「預覽列印」會直接切成 A4／貼紙紙排版；還沒選印表機時按列印不會送出"),
+    N("整體圖示改用 Lucide（開源圖示庫，ISC 授權）：工具列、功能表、對話框的圖示風格統一，功能表項目加上圖示，「實驗中」標示改用燒瓶圖示"),
+    N("在畫布空白處按右鍵，選單多了「屬性」，可直接開啟紙張與標籤尺寸視窗"),
+    N("畫布可以放大縮小：Ctrl＋滾輪、右下角的縮放按鈕、「檢視」選單或 Ctrl＋加號／減號（Ctrl＋0 符合視窗、Ctrl＋1 實際大小）"),
+    N("資料庫連線改成填表式：SQL Server、MySQL／MariaDB、PostgreSQL 內建連線功能，不必安裝 ODBC 驅動程式，也不必懂連線字串或 SQL（SQL 收進「進階」）；預設加密並驗證憑證，可在「連線安全性」調整"),
+    N("在文字、QR Code、條碼的內容欄位輸入欄位符號（兩個左大括號）時會跳出欄位清單可以直接選；工具列把矩形、線條、圖片收進條碼旁的 ▾；程式回報的錯誤訊息改成依目前語言顯示；印表機語言清單標示「（實驗）」"),
+    N("開啟新檔會先詢問紙張與標籤尺寸；直接開啟程式時會先問要建立新標籤還是開啟舊標籤"),
+  ] },
+  { version: "0.9.9", items: [
+    N("修正「使用印表機原生指令列印」的 QR Code 掃不出來：改成明確指定 QR Model 2（原本舊韌體預設用手機不認得的 Model 1）"),
+  ] },
   { version: "0.9.8", items: [
     N("新增自動更新：啟動時自動檢查新版（可在「說明」選單關閉），安裝版有新版時可直接在程式內下載並更新"),
   ] },

@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { devServer } from "./_dev-server.mjs";
 
 const out = process.argv[2] ?? ".tools";
-const tests = ["ui-menu.mjs", "ui-table.mjs", "ui-quality.mjs", "ui-file.mjs", "ui-format.mjs", "ui-textbox.mjs", "ui-preview.mjs", "ui-font.mjs", "ui-undo.mjs", "ui-display.mjs", "ui-closedlg.mjs", "ui-shift.mjs", "ui-help.mjs", "ui-menubar.mjs", "ui-barcode.mjs", "ui-guides.mjs", "ui-native.mjs", "ui-lpxl.mjs", "ui-i18n.mjs", "ui-tooltips.mjs", "ui-multi.mjs", "ui-update.mjs"];
+const tests = ["ui-menu.mjs", "ui-table.mjs", "ui-quality.mjs", "ui-file.mjs", "ui-format.mjs", "ui-textbox.mjs", "ui-preview.mjs", "ui-font.mjs", "ui-undo.mjs", "ui-display.mjs", "ui-closedlg.mjs", "ui-shift.mjs", "ui-help.mjs", "ui-menubar.mjs", "ui-barcode.mjs", "ui-guides.mjs", "ui-native.mjs", "ui-lpxl.mjs", "ui-i18n.mjs", "ui-tooltips.mjs", "ui-multi.mjs", "ui-update.mjs", "ui-lang.mjs", "ui-sheet.mjs", "ui-db.mjs", "ui-split.mjs", "ui-setup.mjs", "ui-natives.mjs", "ui-icons.mjs", "ui-start.mjs", "ui-ipc.mjs", "ui-suggest.mjs", "ui-zoom.mjs"];
 
 const server = await devServer();
 const failed = [];

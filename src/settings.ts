@@ -3,6 +3,16 @@
 /** TTP-244 Pro 為 203 dpi，約 8 dots/mm */
 export const DOTS_PER_MM = 8;
 
+/** 支援的印表機語言（代碼對應後端 langs.rs）。TSPL 以外都是實驗性質：只送點陣，沒有實機驗證 */
+export const PRINT_LANGS = [
+  { id: "tspl", name: "TSPL（TSC）" },
+  { id: "zpl", name: "ZPL II（Zebra）" },
+  { id: "epl", name: "EPL2（Zebra／Eltron）" },
+  { id: "cpcl", name: "CPCL（Zebra 行動式等）" },
+  { id: "dpl", name: "DPL（Datamax-O'Neil）" },
+  { id: "sbpl", name: "SBPL（SATO）" },
+] as const;
+
 export interface Settings {
   /** 設定格式版本，用於升級舊設定 */
   schema: number;
@@ -17,6 +27,10 @@ export interface Settings {
   printerName: string;
   host: string;
   port: number;
+  /** 印表機語言：auto＝依 Windows 驅動程式名稱偵測（只在 Windows 模式有意義；直連 TCP 沒有驅動可看，必須自己選）；其餘為 PRINT_LANGS 的 id */
+  printerLang: string;
+  /** 首次設定（選擇列印用的印表機與語言）是否完成。新安裝為 false，會跳出設定對話框；從舊版升級（設定已存在）視為已完成 */
+  setupDone: boolean;
   /** 列印濃度 0～15（數字越大越黑） */
   density: number;
   /** 列印速度 1～6（慢一點通常比較黑） */
@@ -46,6 +60,8 @@ export const DEFAULT_SETTINGS: Settings = {
   printerName: "",
   host: "192.168.1.100",
   port: 9103,
+  printerLang: "auto",
+  setupDone: false,
   density: 10,
   speed: 4,
   boldness: 0,
@@ -74,6 +90,12 @@ export function loadSettings(): Settings {
       // 舊版（schema 1）預設間隙是 3 mm，但實際驅動設定為 2.0 mm；升級時套用新預設一次
       if ((stored.schema ?? 1) < SCHEMA) s.gapMm = DEFAULT_SETTINGS.gapMm;
       s.schema = SCHEMA;
+      // 已有設定檔、但沒有這個欄位：是舊版使用者，印表機早就選過了，不再詢問
+      s.setupDone = stored.setupDone ?? true;
+      // 舊版（還沒有「印表機語言」）一直都是以 TSPL 列印：升級後明確記成 TSPL，不要變成「自動偵測」而在偵測不到時被擋下
+      if (stored.printerLang === undefined) s.printerLang = "tspl";
+      // auto＝依驅動偵測；office＝一般印表機（不是標籤機，列印與預覽改用 A4／貼紙紙排版）；其餘為標籤機語言
+      if (s.printerLang !== "auto" && s.printerLang !== "office" && !PRINT_LANGS.some((l) => l.id === s.printerLang)) s.printerLang = "auto";
       s.density = Math.round(clamp(s.density, 0, 15, DEFAULT_SETTINGS.density));
       s.speed = Math.round(clamp(s.speed, 1, 6, DEFAULT_SETTINGS.speed));
       s.boldness = Math.round(clamp(s.boldness, 0, 4, 0));

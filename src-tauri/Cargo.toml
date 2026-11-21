@@ -1,6 +1,6 @@
 [package]
 name = "label-printer"
-version = "0.9.8"
+version = "1.0.0"
 description = "標籤列印排版軟體"
 license = "MIT"
 edition = "2021"
@@ -30,9 +30,22 @@ csv = "1.4.0"
 encoding_rs = "0.8.44"
 base64 = "0.23.1"
 chrono = { version = "0.4.45", default-features = false, features = ["alloc"] }
+rusqlite = { version = "0.43.0", features = ["bundled", "column_decltype"] }
+odbc-api = "30.1.0"
+# 伺服器型資料庫改用純 Rust 用戶端（不需要使用者另外安裝 ODBC 驅動程式）；TLS 一律走 Windows 內建的 SChannel（native-tls），不另外帶加密函式庫
+# 安全性評估見 AGENTS.md「原生資料庫連線」：tokio-postgres 必須 >= 0.7.18（RUSTSEC-2026-0178）、tokio 必須 >= 1.54.1（RUSTSEC-2026-0384）
+tiberius = { version = "0.13", default-features = false, features = ["tds73", "winauth", "native-tls"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+futures-util = { version = "0.3", default-features = false }
+mysql = { version = "28", default-features = false, features = ["native-tls", "minimal-rust", "buffer-pool"] }
+postgres = "0.19"
+tokio-postgres = ">=0.7.18"
+postgres-native-tls = "0.5.3"
+native-tls = "0.2.18"
+tokio = { version = ">=1.54.1", features = ["rt", "net", "time"] }
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.58", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing"] }
+windows = { version = "0.58", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Security"] }
 
 [dev-dependencies]
 rust_xlsxwriter = "0.102.0"

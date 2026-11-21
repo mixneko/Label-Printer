@@ -1,13 +1,13 @@
 // 視覺檢查用：以 Edge 無頭模式載入本機 Vite 開發伺服器，模擬 Tauri 後端回應後截圖。
 // 用法（專案根目錄；腳本會自己啟動並關閉 Vite，不需要事先另外開）：
-//   node scripts/ui-shot.mjs [輸出資料夾=.tools] [標籤=samples/範例標籤.lpxl]
+//   node scripts/ui-shot.mjs [輸出資料夾=.tools] [標籤=samples/sample-label.lpxl]
 // 截圖放在「輸出資料夾\shots」。不需要 Tauri、不會連到真正的印表機。
 import { spawn } from "node:child_process";
 import { readFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { devServer, freePort } from "./_dev-server.mjs";
 
-const [, , OUT_DIR = ".tools", TPL_PATH = "samples/範例標籤.lpxl"] = process.argv;
+const [, , OUT_DIR = ".tools", TPL_PATH = "samples/sample-label.lpxl"] = process.argv;
 const SCRATCH = resolve(OUT_DIR);
 const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const OUT = `${SCRATCH}\\shots`;
@@ -53,10 +53,10 @@ window.__TAURI_INTERNALS__ = {
     switch (cmd) {
       case 'list_printers': return ['TSC TTP-244 Pro', 'Microsoft Print to PDF'];
       case 'list_fonts': return ['Arial','Consolas','Microsoft JhengHei','Microsoft JhengHei UI','Segoe UI','Times New Roman','新細明體','微軟正黑體'];
-      case 'plugin:dialog|open': { const n = args?.options?.filters?.[0]?.name || ''; return n.includes('標籤') ? 'D:\\\\samples\\\\範例標籤.lpxl' : 'D:\\\\samples\\\\範例貨品清單.csv'; }
+      case 'plugin:dialog|open': { const n = args?.options?.filters?.[0]?.name || ''; return n.includes('標籤') ? 'D:\\\\samples\\\\sample-label.lpxl' : 'D:\\\\samples\\\\sample-items.csv'; }
       case 'plugin:dialog|ask': return true;
       case 'read_text_file': return ${JSON.stringify(TPL)};
-      case 'read_table': return { sheets: ['Sheet1','員工'], sheet: 'Sheet1', headers: ['品名','編號','批號','效期'], rows: [['螺絲 M3x8 不鏽鋼','A-1001','B2611','2027/11/30'],['墊片 φ6 尼龍','A-1002','B2611','2027/11/30'],['防靜電泡棉內襯收納盒（大型）','C-20003-LONG','B2612','2028/05/31']] };
+      case 'read_table': return { sheets: ['Items','Spare Parts'], sheet: 'Items', headers: ['Item','Code','Lot','Expiry'], rowNumbers: [1,2,3], rows: [['Screw M3x8 Stainless','A-1001','B2611','2027/11/30'],['Nylon Washer 6 mm','A-1002','B2611','2027/11/30'],['Anti-Static Foam Storage Box (Large)','C-20003-LONG','B2612','2028/05/31']] };
       default: console.warn('未模擬的指令', cmd); return null;
     }
   }
@@ -81,8 +81,6 @@ await evalJs("document.getElementById('import-table').click()");
 await sleep(1500);
 await evalJs("document.querySelectorAll('#data-table tr')[1].click()");
 await sleep(800);
-await evalJs("document.getElementById('vars-scan').click()");
-await evalJs("document.getElementById('preview-btn').click()");
 await sleep(500);
 await shot("3-data");
 

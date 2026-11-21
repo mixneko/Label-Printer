@@ -323,8 +323,22 @@ const NATIVE_BARCODE: Record<string, string> = { CODE128: "128", CODE39: "39", E
 
 /** 傳給後端的原生指令項目（座標為標籤內 dots；後端會加上標籤在紙上的位移） */
 export type NativeCode =
-  | { kind: "barcode"; x: number; y: number; code: string; height: number; readable: boolean; narrow: number; wide: number; content: string }
-  | { kind: "qr"; x: number; y: number; ecc: string; cell: number; content: string };
+  | { kind: "barcode"; x: number; y: number; code: string; height: number; readable: boolean; narrow: number; wide: number; content: string; h: number }
+  | { kind: "qr"; x: number; y: number; ecc: string; cell: number; content: string; h: number };
+
+/**
+ * 各印表機語言的原生指令能做哪些物件；不能的退回點陣。
+ * EPL2 手冊沒有 QR 指令；SBPL（Basic Command）沒有 QR 指令，也沒有 Code128／Code39／ITF／Codabar 的人眼可讀文字指令（只有 EAN／UPC 的說明字體）。
+ * TSPL 以外的語言都沒有在實機驗證過（介面上會標「實驗中」）。
+ */
+export function nativeSupported(lang: string, kind: "barcode" | "qr", format = "", showText = false): boolean {
+  switch (lang) {
+    case "tspl": case "zpl": case "cpcl": case "dpl": return true;
+    case "epl": return kind === "barcode";
+    case "sbpl": return kind === "barcode" && (!showText || ["EAN13", "EAN8", "UPC"].includes(format));
+    default: return false;
+  }
+}
 
 /** 這個內容能不能用該格式編成條碼（用 JsBarcode 試編，與畫布上的條碼採同一套規則） */
 export function barcodeValid(text: string, format: string): boolean {
@@ -341,7 +355,7 @@ export function barcodeValid(text: string, format: string): boolean {
  * 不適用：沒有啟用、旋轉過、內容不是半形可列印字元（中文等）、內容缺欄位／不合法（點陣會印出「無效」框，不要交給印表機亂印）。
  * 必須在 refreshCode(node, row) 之後呼叫（條碼寬度依內容而變，x 已依展開方向調整）。
  */
-export function nativeCodeFor(node: Konva.Image, row: Row): NativeCode | null {
+export function nativeCodeFor(node: Konva.Image, row: Row, lang = "tspl"): NativeCode | null {
   if (!node.getAttr("native") || node.rotation() !== 0) return null;
   const kind = kindOf(node);
   const content = substitute(String(node.getAttr("content") ?? ""), row);
@@ -350,16 +364,17 @@ export function nativeCodeFor(node: Konva.Image, row: Row): NativeCode | null {
   if (kind === "barcode") {
     const format = String(node.getAttr("format") ?? "CODE128");
     const code = NATIVE_BARCODE[format];
-    if (!code || !barcodeValid(content, format)) return null;
+    if (!code || !barcodeValid(content, format) || !nativeSupported(lang, "barcode", format, !!node.getAttr("showText"))) return null;
     const narrow = Math.max(1, Number(node.getAttr("moduleWidth")) || 2);
-    return { kind: "barcode", x, y, code, height: Math.max(10, Number(node.getAttr("barHeight")) || 80), readable: !!node.getAttr("showText"), narrow, wide: narrow * 2, content };
+    return { kind: "barcode", x, y, code, height: Math.max(10, Number(node.getAttr("barHeight")) || 80), readable: !!node.getAttr("showText"), narrow, wide: narrow * 2, content, h: Math.round(node.height()) };
   }
   if (kind === "qr") {
+    if (!nativeSupported(lang, "qr")) return null;
     const ec = String(node.getAttr("ecLevel") ?? "M");
     const modules = qrModuleCount(content, ec);
     if (!modules) return null;
     const cell = Math.max(1, Math.round((Number(node.getAttr("qrSize")) || modules) / modules));
-    return { kind: "qr", x, y, ecc: ec, cell, content };
+    return { kind: "qr", x, y, ecc: ec, cell, content, h: Math.round(node.height()) };
   }
   return null;
 }

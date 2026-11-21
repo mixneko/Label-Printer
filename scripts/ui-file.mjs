@@ -93,10 +93,12 @@ check("開啟新檔：有未儲存變更時會詢問", (await ev("window.__asks.
 check("按「取消」→ 維持原樣", (await count()) === before && (await chip()).startsWith("A.json"), `count=${await count()}`);
 await ev("window.__ask = true");
 await openMenu(); await clickItem("開啟新檔");
+await ev("document.getElementById('new-ok').click()"); await sleep(300); // 新標籤會先問尺寸
 check("按「放棄並建立新標籤」→ 清空成空白標籤", (await count()) === 0 && (await chip()) === "未命名標籤", `count=${await count()} chip=${await chip()}`);
 check("新檔沒有未儲存標記", !(await chip()).includes("●"));
 await ev("window.__asks = []");
 await openMenu(); await clickItem("開啟新檔");
+await ev("document.getElementById('new-ok').click()"); await sleep(300); // 新標籤會先問尺寸
 check("沒有變更時，開啟新檔不再詢問", (await ev("window.__asks.length")) === 0);
 
 // ---------- 6. 另存新檔 → 最近清單 ----------
@@ -115,6 +117,7 @@ check("「儲存」已有檔案 → 直接覆蓋，不再跳選檔視窗", (awai
 await ev("document.getElementById('add-rect').click()"); await sleep(200);
 await ev("window.__ask = true");
 await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', ctrlKey: true, bubbles: true }))"); await sleep(400);
+await ev("document.getElementById('new-ok').click()"); await sleep(300); // 新標籤會先問尺寸
 check("Ctrl+N → 開啟新檔", (await count()) === 0 && (await chip()) === "未命名標籤");
 
 // ---------- 8. 再按一次「檔案」按鈕要收起選單（用真正的滑鼠事件）----------

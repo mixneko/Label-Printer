@@ -1,8 +1,12 @@
 // 輕量的右鍵選單：支援分隔線、快捷鍵提示、停用項目與子選單。
 // 項目文字一律以 textContent 寫入，不會把內容當成 HTML。
 
+import { iconEl } from "./icons";
+
 export interface MenuItem {
   label?: string;
+  /** 項目左邊的圖示（index.html 圖示庫裡的名稱，不含 i- 前綴，例如 "save"） */
+  icon?: string;
   /** 右側的快捷鍵提示，例如 "Ctrl+C" */
   hint?: string;
   disabled?: boolean;
@@ -36,6 +40,8 @@ function build(items: MenuItem[], sub = false): HTMLUListElement {
   const ul = document.createElement("ul");
   ul.className = sub ? "menu sub" : "menu";
   ul.setAttribute("role", "menu");
+  // 同一個選單只要有項目有圖示，沒有圖示的項目也留一格空位，文字才會對齊
+  const anyIcon = items.some((i) => i.icon);
   for (const it of items) {
     const li = document.createElement("li");
     if (it.separator) {
@@ -46,6 +52,12 @@ function build(items: MenuItem[], sub = false): HTMLUListElement {
     }
     li.setAttribute("role", "menuitem");
     if (it.disabled) li.classList.add("disabled");
+    if (anyIcon) {
+      const slot = document.createElement("span");
+      slot.className = "ic-slot";
+      if (it.icon) slot.append(iconEl(it.icon));
+      li.append(slot);
+    }
     const label = document.createElement("span");
     label.className = "label";
     label.textContent = it.label ?? "";

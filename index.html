@@ -11,45 +11,78 @@
     </script>
   </head>
   <body>
-    <!-- 圖示（Lucide 風格線條圖示，供 <use href="#i-…"> 引用） -->
+    <!-- ICONS:BEGIN -->
+    <!-- 圖示：Lucide（ISC 授權，https://lucide.dev ）。由 scripts/gen-icons.mjs 自動產生，供 <use href="#i-…"> 引用；不要手改，要增減請改腳本裡的清單 -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
       <defs>
         <symbol id="i-open" viewBox="0 0 24 24"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></symbol>
         <symbol id="i-save" viewBox="0 0 24 24"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></symbol>
-        <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
-        <symbol id="i-table" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M3 15h18M12 3v18"/></symbol>
-        <symbol id="i-type" viewBox="0 0 24 24"><path d="M12 4v16M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M9 20h6"/></symbol>
-        <symbol id="i-qr" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3M21 21v.01M12 7v3a2 2 0 0 1-2 2H7M3 12h.01M12 3h.01M12 16v.01M16 12h1M21 12v.01M12 21v-1"/></symbol>
-        <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M3 5v14M7 5v14M11 5v14M14 5v14M18 5v14M21 5v14"/></symbol>
+        <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+        <symbol id="i-table" viewBox="0 0 24 24"><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></symbol>
+        <symbol id="i-type" viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><path d="M9 20h6"/></symbol>
+        <symbol id="i-qr" viewBox="0 0 24 24"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></symbol>
+        <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M3 5v14"/><path d="M8 5v14"/><path d="M12 5v14"/><path d="M17 5v14"/><path d="M21 5v14"/></symbol>
         <symbol id="i-square" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/></symbol>
         <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
-        <symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
-        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/></symbol>
-        <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 9V3h12v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
-        <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
-        <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49M14.084 14.158a3 3 0 0 1-4.242-4.242M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143M2 2l20 20"/></symbol>
-        <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
-        <symbol id="i-unlock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></symbol>
-        <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5"/></symbol>
+        <symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+        <symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
+        <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+        <symbol id="i-unlock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+        <symbol id="i-zoom-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></symbol>
+        <symbol id="i-zoom-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></symbol>
+        <symbol id="i-maximize" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+        <symbol id="i-focus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></symbol>
+        <symbol id="i-door-open" viewBox="0 0 24 24"><path d="M10 21H2"/><path d="M10 3H7a2 2 0 00-2 2v16"/><path d="M14 12h.01"/><path d="M19 21V5a2 2 0 00-1.675-1.974l-6.163-1.013A1 1 0 0010 3v18a1 1 0 001.124.992z"/><path d="M22 21h-3"/></symbol>
         <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
-        <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
-        <symbol id="i-align-l" viewBox="0 0 24 24"><path d="M21 6H3M15 12H3M17 18H3"/></symbol>
-        <symbol id="i-align-c" viewBox="0 0 24 24"><path d="M21 6H3M17 12H7M19 18H5"/></symbol>
-        <symbol id="i-align-r" viewBox="0 0 24 24"><path d="M21 6H3M21 12H9M21 18H7"/></symbol>
-        <symbol id="i-group" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="7" height="5" x="7" y="7" rx="1"/><rect width="7" height="5" x="10" y="12" rx="1"/></symbol>
-        <symbol id="i-ungroup" viewBox="0 0 24 24"><rect width="8" height="6" x="2" y="4" rx="1"/><rect width="8" height="6" x="14" y="14" rx="1"/><path d="M14 4h2a2 2 0 0 1 2 2v2M10 20H8a2 2 0 0 1-2-2v-2"/></symbol>
-        <symbol id="i-top" viewBox="0 0 24 24"><path d="M5 3h14M18 13l-6-6-6 6M12 7v14"/></symbol>
-        <symbol id="i-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7M12 19V5"/></symbol>
-        <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14m7-7-7 7-7-7"/></symbol>
-        <symbol id="i-bottom" viewBox="0 0 24 24"><path d="M12 17V3M6 11l6 6 6-6M19 21H5"/></symbol>
-        <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"/><path d="M12 17h.01"/></symbol>
-        <symbol id="i-eye-sm" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
-      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/></symbol>
-      <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
-        <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
-        <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+        <symbol id="i-align-l" viewBox="0 0 24 24"><path d="M21 5H3"/><path d="M15 12H3"/><path d="M17 19H3"/></symbol>
+        <symbol id="i-align-c" viewBox="0 0 24 24"><path d="M21 5H3"/><path d="M17 12H7"/><path d="M19 19H5"/></symbol>
+        <symbol id="i-align-r" viewBox="0 0 24 24"><path d="M21 5H3"/><path d="M21 12H9"/><path d="M21 19H7"/></symbol>
+        <symbol id="i-group" viewBox="0 0 24 24"><path d="M3 7V5c0-1.1.9-2 2-2h2"/><path d="M17 3h2c1.1 0 2 .9 2 2v2"/><path d="M21 17v2c0 1.1-.9 2-2 2h-2"/><path d="M7 21H5c-1.1 0-2-.9-2-2v-2"/><rect width="7" height="5" x="7" y="7" rx="1"/><rect width="7" height="5" x="10" y="12" rx="1"/></symbol>
+        <symbol id="i-ungroup" viewBox="0 0 24 24"><rect x="11" y="14" width="10" height="7" rx="2"/><rect x="3" y="3" width="10" height="7" rx="2"/></symbol>
+        <symbol id="i-top" viewBox="0 0 24 24"><path d="M5 3h14"/><path d="m18 13-6-6-6 6"/><path d="M12 7v14"/></symbol>
+        <symbol id="i-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></symbol>
+        <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
+        <symbol id="i-bottom" viewBox="0 0 24 24"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></symbol>
+        <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 9.5a3 2.5 0 016 0c0 2-2 2-3 3.5"/><path d="M12 17h.01"/></symbol>
+        <symbol id="i-eye-sm" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+        <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+        <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol>
+        <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></symbol>
+        <symbol id="i-flask" viewBox="0 0 24 24"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/></symbol>
+        <symbol id="i-sheet" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></symbol>
+        <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></symbol>
+        <symbol id="i-file-down" viewBox="0 0 24 24"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></symbol>
+        <symbol id="i-file-plus" viewBox="0 0 24 24"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M9 15h6"/><path d="M12 18v-6"/></symbol>
+        <symbol id="i-save-all" viewBox="0 0 24 24"><path d="M10 2v3a1 1 0 0 0 1 1h5"/><path d="M18 18v-6a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6"/><path d="M18 22H4a2 2 0 0 1-2-2V6"/><path d="M8 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9.172a2 2 0 0 1 1.414.586l2.828 2.828A2 2 0 0 1 22 6.828V16a2 2 0 0 1-2.01 2z"/></symbol>
+        <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/></symbol>
+        <symbol id="i-paste" viewBox="0 0 24 24"><path d="M11 14h10"/><path d="M16 4h2a2 2 0 0 1 2 2v1.344"/><path d="m17 18 4-4-4-4"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 1.793-1.113"/><rect x="8" y="2" width="8" height="4" rx="1"/></symbol>
+        <symbol id="i-copy-plus" viewBox="0 0 24 24"><line x1="15" x2="15" y1="12" y2="18"/><line x1="12" x2="18" y1="15" y2="15"/><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+        <symbol id="i-select-all" viewBox="0 0 24 24"><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/></symbol>
+        <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></symbol>
+        <symbol id="i-braces" viewBox="0 0 24 24"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></symbol>
+        <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></symbol>
+        <symbol id="i-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+        <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></symbol>
+        <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+        <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M7 21h10"/></symbol>
+        <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></symbol>
+        <symbol id="i-panel" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></symbol>
+        <symbol id="i-spreadsheet" viewBox="0 0 24 24"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></symbol>
+        <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></symbol>
+        <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"/><path d="m5.082 11.09 8.828 8.828"/></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 13v8l-4-4"/><path d="m12 21 4-4"/><path d="M4.393 15.269A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.436 8.284"/></symbol>
+        <symbol id="i-magnet" viewBox="0 0 24 24"><path d="m12 15 4 4"/><path d="M2.352 10.648a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l6.029-6.029a1 1 0 1 1 3 3l-6.029 6.029a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l6.365-6.367A1 1 0 0 0 8.716 4.282z"/><path d="m5 8 4 4"/></symbol>
+        <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></symbol>
       </defs>
     </svg>
+    <!-- ICONS:END -->
 
     <nav id="menubar" class="menubar" aria-label="功能表">
       <button id="file-menu" class="mb" title="檔案 (Alt+F)：開啟新檔、開啟舊檔、儲存、另存新檔、最近開啟的檔案" aria-haspopup="menu">檔案<u>(F)</u></button>
@@ -74,9 +107,9 @@
         <button id="add-text" class="btn" title="新增文字"><svg class="ic"><use href="#i-type" /></svg></button>
         <button id="add-qr" class="btn" title="新增 QR Code"><svg class="ic"><use href="#i-qr" /></svg></button>
         <button id="add-barcode" class="btn" title="新增條碼"><svg class="ic"><use href="#i-barcode" /></svg></button>
-        <button id="add-rect" class="btn" title="新增矩形"><svg class="ic"><use href="#i-square" /></svg></button>
-        <button id="add-line" class="btn" title="新增線條"><svg class="ic"><use href="#i-minus" /></svg></button>
-        <button id="add-image" class="btn" title="新增圖片"><svg class="ic"><use href="#i-image" /></svg></button>
+        <button id="add-rect" class="btn" hidden title="新增矩形"><svg class="ic"><use href="#i-square" /></svg></button>
+        <button id="add-line" class="btn" hidden title="新增線條"><svg class="ic"><use href="#i-minus" /></svg></button>
+        <button id="add-image" class="btn" hidden title="新增圖片"><svg class="ic"><use href="#i-image" /></svg></button>
         <input id="image-file" type="file" accept="image/*" hidden />
       </div>
 
@@ -99,6 +132,11 @@
 
     <main class="layout">
       <section class="workspace">
+        <div class="zoombar" role="group" aria-label="縮放">
+          <button id="zoom-out" class="btn icon" type="button" title="縮小 (Ctrl+-)"><svg class="ic"><use href="#i-zoom-out" /></svg></button>
+          <button id="zoom-label" class="btn" type="button" title="符合視窗 (Ctrl+0)">100%</button>
+          <button id="zoom-in" class="btn icon" type="button" title="放大 (Ctrl++)"><svg class="ic"><use href="#i-zoom-in" /></svg></button>
+        </div>
         <div class="canvas-wrap">
           <div class="paper-block">
             <div id="stage"></div>
@@ -211,6 +249,7 @@
 
             <div data-kinds="qr barcode">
               <label class="check" title="預設關閉。開啟後，這個條碼／QR 由印表機自己產生（速度較快、邊緣較銳利），不再是點陣"><input id="prop-native" type="checkbox" /> 使用印表機原生指令列印</label>
+              <p id="native-exp" class="native-exp" hidden></p>
               <p class="hint">預設不啟用。啟用後畫布與預覽仍以點陣近似顯示，實際大小與位置可能有些微差異；內容含中文、物件旋轉過，或內容不合法時，會自動改用點陣。請先印一張確認可以掃描。</p>
             </div>
 
@@ -249,7 +288,7 @@
       <div class="data-bar">
         <svg class="ic muted"><use href="#i-table" /></svg>
         <strong id="data-file"></strong>
-        <label class="inline">工作表 <select id="data-sheet"></select></label>
+        <label class="inline"><span id="data-sheet-label">工作表</span> <select id="data-sheet"></select></label>
         <button id="data-reload" type="button" class="btn sm" title="重新讀取檔案（Excel 內容改過後使用）"><svg class="ic"><use href="#i-refresh" /></svg>重新讀取</button>
         <span class="divider"></span>
         <button id="data-all" type="button" class="btn sm">全選</button>
@@ -350,15 +389,30 @@
     <dialog id="dlg-paper" class="dialog settings-dlg">
       <header class="dlg-head"><h2>紙張與標籤尺寸（mm）</h2></header>
       <div class="dlg-body">
-            <div class="grid">
-              <label>紙寬 <input id="paper-w" type="number" step="0.1" /></label>
-              <label>紙高 <input id="paper-h" type="number" step="0.1" /></label>
-              <label>標籤寬 <input id="tpl-w" type="number" step="0.1" /></label>
-              <label>標籤高 <input id="tpl-h" type="number" step="0.1" /></label>
-              <label title="標籤與標籤之間的空白高度。TSC 驅動「標籤樣式」裡的「間隙高度」">間隙高度 <input id="gap" type="number" step="0.1" /></label>
-            </div>
+            <div class="grid" data-size-fields=""></div>
           </div>
       <footer class="dlg-foot"><span class="spacer"></span><button type="button" class="btn primary" data-dlg-close>關閉</button></footer>
+    </dialog>
+
+    <dialog id="dlg-new" class="dialog settings-dlg">
+      <header class="dlg-head"><h2>新增標籤</h2></header>
+      <div class="dlg-body">
+        <p class="hint">請先決定紙張與標籤的大小（mm）。之後隨時可以在畫布空白處按右鍵 →「屬性」修改。</p>
+        <div class="grid" data-size-fields="new-"></div>
+      </div>
+      <footer class="dlg-foot"><span class="spacer"></span><button type="button" class="btn" id="new-cancel">取消</button><button type="button" class="btn primary" id="new-ok">建立</button></footer>
+    </dialog>
+
+    <dialog id="dlg-start" class="dialog settings-dlg start-dlg">
+      <header class="dlg-head"><h2>歡迎使用 Label Printer</h2></header>
+      <div class="dlg-body">
+        <p class="hint">您想要做什麼？</p>
+        <button type="button" class="start-row" id="start-new"><svg class="ic"><use href="#i-file-plus" /></svg><span>建立新標籤</span></button>
+        <button type="button" class="start-row" id="start-open"><svg class="ic"><use href="#i-open" /></svg><span>開啟舊標籤</span></button>
+        <p class="start-sub"><svg class="ic"><use href="#i-history" /></svg><span>開啟最近使用的標籤</span></p>
+        <ul id="start-recent" class="start-recent"></ul>
+      </div>
+      <footer class="dlg-foot"><label class="check"><input id="start-never" type="checkbox" /> 不要再顯示此對話方塊</label><span class="spacer"></span><button type="button" class="btn" id="start-cancel">取消</button></footer>
     </dialog>
 
     <dialog id="dlg-quality" class="dialog settings-dlg">
@@ -402,8 +456,9 @@
     </dialog>
 
     <dialog id="dlg-printer" class="dialog settings-dlg">
-      <header class="dlg-head"><h2>印表機</h2></header>
+      <header class="dlg-head"><h2 id="printer-title">印表機</h2><h2 id="printer-title-setup" hidden>首次設定：選擇列印用的印表機</h2></header>
       <div class="dlg-body">
+            <p id="printer-setup-msg" class="hint" hidden>第一次使用，請確認要用哪一台印表機列印標籤，以及它使用的標籤語言。選錯（例如選成一般的事務機），標籤會印不出來或印出亂碼。之後可以在「工具 → 印表機…」更改。</p>
             <label>連線方式
               <select id="printer-mode">
                 <option value="windows">Windows 已安裝的印表機</option>
@@ -420,15 +475,19 @@
               <label>IP <input id="host" type="text" /></label>
               <label>Port <input id="port" type="number" /></label>
             </div>
+            <label>印表機語言
+              <select id="printer-lang"></select>
+            </label>
+            <p id="printer-lang-hint" class="hint"></p>
           </div>
-      <footer class="dlg-foot"><span class="spacer"></span><button type="button" class="btn primary" data-dlg-close>關閉</button></footer>
+      <footer class="dlg-foot"><span class="spacer"></span><button id="printer-setup-later" type="button" class="btn" hidden>稍後再設定</button><button id="printer-setup-ok" type="button" class="btn primary" hidden disabled>確定</button><button id="printer-close" type="button" class="btn primary" data-dlg-close>關閉</button></footer>
     </dialog>
 
     <!-- 說明：關於、第三方授權聲明 -->
     <dialog id="about-dialog" class="dialog close-dlg">
       <header class="dlg-head"><h2>關於 Label Printer</h2></header>
       <div class="dlg-body">
-        <p class="close-msg">輕量的標籤排版與列印軟體，使用 TSPL 指令列印到 TSC 標籤機。<br /><span id="about-ver"></span></p>
+        <p class="close-msg">輕量的標籤排版與列印軟體，支援 TSPL、ZPL 等多種標籤機語言。<br /><span id="about-ver"></span></p>
         <p class="close-msg">本程式使用多個開放原始碼套件（Tauri、Konva、QRCode、JsBarcode、calamine 等），各套件依其授權條款散布。</p>
       </div>
       <footer class="dlg-foot">
@@ -474,6 +533,163 @@
     </dialog>
 
     <!-- 預覽列印（工具列「預覽列印」、Ctrl+P，或資料表上的「預覽列印」） -->
+    <!-- 連線到資料庫 -->
+    <dialog id="dlg-db" class="dialog settings-dlg">
+      <header class="dlg-head"><h2>連線到資料庫</h2></header>
+      <div class="dlg-body">
+        <p class="hint">支援 SQLite、Access 檔案；SQL Server、MySQL／MariaDB、PostgreSQL 可直接連線（不需要安裝驅動程式），其他資料庫可用 ODBC。一律唯讀，不會修改資料庫。</p>
+        <label>類型
+          <select id="db-kind">
+            <option value="file">SQLite／Access 檔案</option>
+            <option value="sqlserver">SQL Server</option>
+            <option value="mysql">MySQL／MariaDB</option>
+            <option value="postgres">PostgreSQL</option>
+            <option value="odbc">其他 ODBC（輸入連線字串）</option>
+          </select>
+        </label>
+        <div id="db-file-fields">
+          <label>檔案路徑
+            <input id="db-path" type="text" spellcheck="false" />
+          </label>
+          <div class="btn-row"><button id="db-browse" type="button" class="btn sm"><svg class="ic"><use href="#i-open" /></svg>選擇檔案…</button></div>
+        </div>
+        <div id="db-server-fields" hidden>
+          <div class="grid">
+            <label>伺服器 <input id="db-host" type="text" spellcheck="false" placeholder="192.168.1.10" /></label>
+            <label>連接埠（選填） <input id="db-port" type="text" inputmode="numeric" spellcheck="false" /></label>
+          </div>
+          <label>資料庫名稱 <input id="db-name" type="text" spellcheck="false" /></label>
+          <label class="check inline-check" id="db-winauth-row"><input id="db-winauth" type="checkbox" /> 使用 Windows 驗證（不用帳號密碼）</label>
+          <div class="grid" id="db-cred">
+            <label>帳號 <input id="db-user" type="text" spellcheck="false" autocomplete="off" /></label>
+            <label>密碼 <input id="db-pass" type="password" autocomplete="off" /></label>
+          </div>
+          <label>連線安全性
+            <select id="db-security">
+              <option value="verify">加密並驗證憑證（建議）</option>
+              <option value="trust">加密，信任自簽憑證</option>
+              <option value="off">不加密（只用於可信任的內部網路）</option>
+            </select>
+          </label>
+          <p class="hint">不需要安裝任何驅動程式。密碼只暫存在記憶體，不會存檔。連線後會列出資料庫裡的資料表，選一個就能載入。建議使用只有讀取權限的帳號。</p>
+        </div>
+        <div id="db-odbc-fields" hidden>
+          <label>ODBC 驅動程式或資料來源
+            <select id="db-src"></select>
+          </label>
+          <label>連線字串
+            <textarea id="db-cs" rows="3" spellcheck="false"></textarea>
+          </label>
+          <p class="hint">連線字串可以包含帳號與密碼；密碼只暫存在記憶體，不會存檔。範例：</p>
+          <p class="hint"><code>Driver={ODBC Driver 17 for SQL Server};Server=host;Database=db;UID=user;PWD=pass;</code></p>
+        </div>
+        <details id="db-adv">
+          <summary>進階：只取部分欄位或資料列（需要寫 SQL，一般不必填）</summary>
+          <label>SQL 查詢
+            <textarea id="db-sql" rows="3" spellcheck="false"></textarea>
+          </label>
+          <p class="hint">只能寫一個 SELECT 查詢，例如只取需要的欄位或篩選資料列。不可包含分號，也不能修改資料。</p>
+        </details>
+        <p id="db-msg" class="hint"></p>
+      </div>
+      <footer class="dlg-foot"><span class="spacer"></span><button type="button" class="btn" data-dlg-close>取消</button><button id="db-go" type="button" class="btn primary"><svg class="ic"><use href="#i-plug" /></svg>連線並載入</button></footer>
+    </dialog>
+
+    <!-- 貼紙紙／A4 排版列印 -->
+    <dialog id="dlg-sheet" class="dialog sheet-dlg">
+      <header class="dlg-head">
+        <h2>貼紙紙／A4 排版列印</h2>
+        <button id="sh-close-x" type="button" class="btn icon" title="關閉"><svg class="ic"><use href="#i-x" /></svg></button>
+      </header>
+      <div class="sheet-main">
+        <div class="sheet-form">
+          <label>用途
+            <select id="sh-kind">
+              <option value="die">有模切的貼紙紙（不印裁切線）</option>
+              <option value="plain">沒有裁切線的普通紙（印輔助裁切線）</option>
+            </select>
+          </label>
+          <div class="grid">
+            <label>紙張
+              <select id="sh-paper">
+                <option value="a4">A4（210 × 297 mm）</option>
+                <option value="letter">Letter（215.9 × 279.4 mm）</option>
+                <option value="custom">自訂尺寸</option>
+              </select>
+            </label>
+            <label>方向
+              <select id="sh-orient">
+                <option value="p">直式</option>
+                <option value="l">橫式</option>
+              </select>
+            </label>
+          </div>
+          <div id="sh-custom" class="grid" hidden>
+            <label>紙寬（mm）<input id="sh-pw" type="number" min="20" step="0.1" /></label>
+            <label>紙高（mm）<input id="sh-ph" type="number" min="20" step="0.1" /></label>
+          </div>
+          <div class="grid">
+            <label>標籤寬（mm）<input id="sh-lw" type="number" min="1" step="0.1" /></label>
+            <label>標籤高（mm）<input id="sh-lh" type="number" min="1" step="0.1" /></label>
+          </div>
+          <div class="grid">
+            <label>欄數<input id="sh-cols" type="number" min="1" max="50" step="1" /></label>
+            <label>列數<input id="sh-rows" type="number" min="1" max="100" step="1" /></label>
+          </div>
+          <div class="grid">
+            <label>左邊界（mm）<input id="sh-ml" type="number" min="0" step="0.1" /></label>
+            <label>上邊界（mm）<input id="sh-mt" type="number" min="0" step="0.1" /></label>
+          </div>
+          <div class="grid">
+            <label>橫向間距（mm）<input id="sh-gx" type="number" min="0" step="0.1" /></label>
+            <label>直向間距（mm）<input id="sh-gy" type="number" min="0" step="0.1" /></label>
+          </div>
+          <div class="btn-row">
+            <button id="sh-use-label" type="button" class="btn sm"><svg class="ic"><use href="#i-ruler" /></svg>使用目前標籤尺寸</button>
+            <button id="sh-fit" type="button" class="btn sm"><svg class="ic"><use href="#i-sheet" /></svg>自動排滿並置中</button>
+          </div>
+          <div class="grid">
+            <label>安全邊界（mm）<input id="sh-safe" type="number" min="0" max="30" step="0.5" /></label>
+            <label>起始格<input id="sh-start" type="number" min="1" step="1" /></label>
+          </div>
+          <p class="hint">印表機通常印不到紙張最外圍的幾 mm。安全邊界以內不要放標籤或裁切標記，避免被印表機吃掉。起始格用來接續用過一半的貼紙紙。</p>
+          <div class="grid">
+            <label>裁切線
+              <select id="sh-cut">
+                <option value="none">不印</option>
+                <option value="marks">角落標記（印在標籤外側）</option>
+                <option value="lines">虛線格線（沿標籤邊緣）</option>
+              </select>
+            </label>
+            <label>解析度
+              <select id="sh-dpi">
+                <option value="300">300 dpi</option>
+                <option value="406">406 dpi（QR 與條碼最銳利）</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="sheet-side">
+          <div class="pv-bar">
+            <span id="sh-nav" class="pv-nav">
+              <button id="sh-prev" type="button" class="btn sm" title="上一頁">‹</button>
+              <button id="sh-next" type="button" class="btn sm" title="下一頁">›</button>
+            </span>
+            <span id="sh-page" class="pv-page"></span>
+          </div>
+          <div class="sheet-view"><canvas id="sh-canvas"></canvas></div>
+          <p id="sh-warn" class="sheet-warn" hidden></p>
+          <p id="sh-info" class="pv-info"></p>
+        </div>
+      </div>
+      <footer class="dlg-foot">
+        <span class="spacer"></span>
+        <button id="sh-pdf" type="button" class="btn"><svg class="ic"><use href="#i-file-down" /></svg>匯出 PDF…</button>
+        <button id="sh-print" type="button" class="btn primary"><svg class="ic"><use href="#i-printer" /></svg>列印…</button>
+        <button id="sh-close" type="button" class="btn">關閉</button>
+      </footer>
+    </dialog>
+
     <dialog id="pv-dialog" class="dialog pv">
       <header class="dlg-head">
         <h2>預覽列印</h2>
@@ -516,6 +732,7 @@
     </dialog>
 
     <footer class="statusbar"><span id="status" class="status" data-ready="就緒"></span></footer>
+    <div id="sheet-print"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

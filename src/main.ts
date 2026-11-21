@@ -1,6 +1,6 @@
 import "./style.css";
 import Konva from "konva";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./ipc";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ask, open, save } from "@tauri-apps/plugin-dialog";
 import { askClose } from "./closedialog";
@@ -13,19 +13,25 @@ import { LANG_NAMES, LOCALES, type Lang } from "./locales";
 import { attachGuides, guidesEnabled, setGuidesEnabled } from "./guides";
 import { calibrationElements } from "./calibration";
 import { canvasToMono, monoToCanvas, toBase64, type PackedBitmap } from "./bitmap";
-import { initTable, selectedRows, tableHeaders } from "./table";
+import { initTable, loadSource, selectedRows, tableHeaders } from "./table";
+import { initDbDialog, openDbDialog } from "./dbdialog";
 import { initPreview, openPreview } from "./printpreview";
+import { initSheet, openSheet } from "./sheetprint";
+import { addSplit } from "./splitbtn";
+import { attachFieldSuggest } from "./fieldsuggest";
+import { SIZE_FIELDS, askNewSize, buildSizeFields, initStartDialogs, setStartDisabled, showStart, startDisabled } from "./startdialogs";
+import { iconEl, setIconText } from "./icons";
 import { initLayers, moveElements, refreshLayers, toggleLocked, toggleVisible } from "./layers";
 import { ALIGN_LABEL, alignTo, bbox, type Align } from "./arrange";
 import { hideMenu, isMenuOpen, onMenuHidden, showMenu, type MenuItem } from "./contextmenu";
 import { baseName, clearRecent, loadRecent, pushRecent, removeRecent, shortDir } from "./recent";
 import { initProps, openProps } from "./props";
 import {
-  BARCODE_FORMATS, DEFAULT_FONT, nativeCodeFor, setDesignRow, type NativeCode, applyRectStyle, baseSizeOf, contentOf, createElement, defaults, fitText, setContent, isBounded, kindOf, ratioLockOf, refreshCode,
+  BARCODE_FORMATS, DEFAULT_FONT, nativeCodeFor, nativeSupported, setDesignRow, type NativeCode, applyRectStyle, baseSizeOf, contentOf, createElement, defaults, fitText, setContent, isBounded, kindOf, ratioLockOf, refreshCode,
   naturalTextSize, serialize, setBounded, setTextSize, snapQrSize,
   type ElementData, type Kind,
 } from "./elements";
-import { DOTS_PER_MM, loadSettings, mmToDots, saveSettings, thresholdOf, type Settings } from "./settings";
+import { DOTS_PER_MM, loadSettings, mmToDots, PRINT_LANGS, saveSettings, thresholdOf, type Settings } from "./settings";
 import { placeholdersOf, substitute, type Placeholder, type Raw, type RawRow, type Row } from "./template";
 import { renderFormatList } from "./fieldformat";
 import { initFontCombo } from "./fontcombo";
@@ -55,6 +61,7 @@ function buildStage(): void {
   stage.add(layer);
   layer.add(new Konva.Rect({ x: 0, y: 0, width: w, height: h, fill: "white", listening: false }));
   updateStageCaption();
+  updateZoomLabel();
   transformer = new Konva.Transformer({ rotateEnabled: true, keepRatio: true });
   layer.add(transformer);
 
@@ -118,7 +125,12 @@ function buildStage(): void {
   select(null);
 }
 
-/** 依工作區可用空間調整畫面倍率（0.5～3 倍），讓整張標籤都看得到；只影響顯示，不影響列印 */
+/** 手動縮放倍率；null 表示「符合視窗」（自動，隨視窗大小調整） */
+let manualZoom: number | null = null;
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 8;
+
+/** 畫面倍率：預設依工作區可用空間自動調整（0.5～3 倍）讓整張標籤都看得到；使用者縮放後（0.25～8 倍）固定在該倍率。只影響顯示，不影響列印 */
 function fitZoom(): void {
   if (!stage) return;
   const wrap = document.querySelector<HTMLElement>(".canvas-wrap");
@@ -127,12 +139,40 @@ function fitZoom(): void {
   const h = mmToDots(settings.tplHmm);
   const availW = wrap.clientWidth - 72;
   const availH = wrap.clientHeight - 72 - 28; // 扣掉邊距與下方的尺寸標示
-  const next = Math.max(0.5, Math.min(3, availW / w, availH / h));
-  if (Math.abs(next - zoom) < 0.01) return;
-  zoom = next;
-  stage.size({ width: w * zoom, height: h * zoom });
-  stage.scale({ x: zoom, y: zoom });
+  const auto = Math.max(0.5, Math.min(3, availW / w, availH / h));
+  applyZoom(manualZoom ?? auto);
 }
+
+function applyZoom(next: number): void {
+  const wrap = document.querySelector<HTMLElement>(".canvas-wrap")!;
+  if (Math.abs(next - zoom) >= 0.001) {
+    // 縮放前後保持畫面中心不動
+    const cx = (wrap.scrollLeft + wrap.clientWidth / 2) / Math.max(1, wrap.scrollWidth);
+    const cy = (wrap.scrollTop + wrap.clientHeight / 2) / Math.max(1, wrap.scrollHeight);
+    zoom = next;
+    stage.size({ width: mmToDots(settings.tplWmm) * zoom, height: mmToDots(settings.tplHmm) * zoom });
+    stage.scale({ x: zoom, y: zoom });
+    wrap.scrollLeft = cx * wrap.scrollWidth - wrap.clientWidth / 2;
+    wrap.scrollTop = cy * wrap.scrollHeight - wrap.clientHeight / 2;
+  }
+  updateZoomLabel();
+}
+
+function updateZoomLabel(): void {
+  const el = document.getElementById("zoom-label");
+  if (el) el.textContent = `${Math.round(zoom * 100)}%`;
+}
+
+const clampZoom = (z: number): number => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+/** 放大／縮小（factor > 1 放大） */
+function zoomBy(factor: number): void {
+  manualZoom = clampZoom(Math.round(zoom * factor * 100) / 100);
+  fitZoom();
+}
+/** 符合視窗（自動） */
+function zoomFit(): void { manualZoom = null; fitZoom(); }
+/** 實際大小：1 個點 = 1 個螢幕像素（100%） */
+function zoomActual(): void { manualZoom = 1; fitZoom(); }
 
 let dragMoved = false; // 這次按下是否拖曳過（沒拖曳才把多選縮回單選）
 let downOn: Konva.Shape | null = null;
@@ -338,16 +378,19 @@ function alignSelection(nodes: Konva.Shape[], how: Align): void {
 
 function showElementMenu(n: Konva.Shape | null, x: number, y: number): void {
   if (!n) {
-    showMenu(x, y, [{ label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() }]);
+    showMenu(x, y, [
+      { icon: "paste", label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
+      { icon: "sliders", label: tr("屬性"), onClick: () => openSettings("dlg-paper") }, // 空白處的「屬性」＝紙張與標籤尺寸
+    ]);
     return;
   }
   const locked = !!n.getAttr("locked");
-  const props: MenuItem = { label: tr("屬性…"), hint: "Alt+Enter", onClick: () => openProps(n) };
+  const props: MenuItem = { icon: "sliders", label: tr("屬性…"), hint: "Alt+Enter", onClick: () => openProps(n) };
 
   if (locked) {
     showMenu(x, y, [
-      { label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNode(n) },
-      { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
+      { icon: "copy", label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNode(n) },
+      { icon: "paste", label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
       { separator: true },
       { label: tr("解除鎖定"), onClick: () => toggleLocked(n) },
       { separator: true },
@@ -361,10 +404,10 @@ function showElementMenu(n: Konva.Shape | null, x: number, y: number): void {
     onClick: () => alignNode(n, how),
   }));
   showMenu(x, y, [
-    { label: tr("剪下"), hint: "Ctrl+X", onClick: () => cutNode(n) },
-    { label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNode(n) },
-    { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
-    { label: tr("重複"), hint: "Ctrl+D", onClick: () => void duplicateNode(n) },
+    { icon: "scissors", label: tr("剪下"), hint: "Ctrl+X", onClick: () => cutNode(n) },
+    { icon: "copy", label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNode(n) },
+    { icon: "paste", label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
+    { icon: "copy-plus", label: tr("重複"), hint: "Ctrl+D", onClick: () => void duplicateNode(n) },
     { separator: true },
     {
       label: tr("排列"),
@@ -382,7 +425,7 @@ function showElementMenu(n: Konva.Shape | null, x: number, y: number): void {
     { label: tr("鎖定"), onClick: () => toggleLocked(n) },
     { label: n.visible() ? tr("隱藏") : tr("顯示"), onClick: () => toggleVisible(n) },
     { separator: true },
-    { label: tr("刪除"), hint: "Delete", onClick: () => removeNode(n) },
+    { icon: "trash", label: tr("刪除"), hint: "Delete", onClick: () => removeNode(n) },
     { separator: true },
     props,
   ]);
@@ -398,13 +441,13 @@ function showMultiMenu(x: number, y: number): void {
   const gids = new Set(sel.map((n) => (n.getAttr("groupId") as string | undefined) ?? ""));
   const canGroup = sel.length >= 2 && !(gids.size === 1 && !gids.has(""));
   showMenu(x, y, [
-    { label: tr("剪下"), hint: "Ctrl+X", onClick: () => cutNodes(sel) },
-    { label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNodes(sel) },
-    { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
-    { label: tr("重複"), hint: "Ctrl+D", onClick: () => void duplicateNodes(sel) },
+    { icon: "scissors", label: tr("剪下"), hint: "Ctrl+X", onClick: () => cutNodes(sel) },
+    { icon: "copy", label: tr("複製"), hint: "Ctrl+C", onClick: () => copyNodes(sel) },
+    { icon: "paste", label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
+    { icon: "copy-plus", label: tr("重複"), hint: "Ctrl+D", onClick: () => void duplicateNodes(sel) },
     { separator: true },
-    { label: tr("群組"), hint: "Ctrl+G", disabled: !canGroup, onClick: groupSelection },
-    { label: tr("取消群組"), hint: "Ctrl+Shift+G", disabled: !sel.some((n) => n.getAttr("groupId")), onClick: ungroupSelection },
+    { icon: "group", label: tr("群組"), hint: "Ctrl+G", disabled: !canGroup, onClick: groupSelection },
+    { icon: "ungroup", label: tr("取消群組"), hint: "Ctrl+Shift+G", disabled: !sel.some((n) => n.getAttr("groupId")), onClick: ungroupSelection },
     { separator: true },
     {
       label: tr("排列"),
@@ -422,7 +465,7 @@ function showMultiMenu(x: number, y: number): void {
     { label: tr("鎖定"), onClick: () => { for (const n of sel) toggleLocked(n); } },
     { label: tr("隱藏"), onClick: () => { for (const n of sel) toggleVisible(n); } },
     { separator: true },
-    { label: tr("刪除"), hint: "Delete", onClick: () => removeNodes(sel) },
+    { icon: "trash", label: tr("刪除"), hint: "Delete", onClick: () => removeNodes(sel) },
   ]);
 }
 
@@ -480,6 +523,19 @@ function syncPanel(): void {
     $<HTMLInputElement>("prop-stroke").value = String((selected as Konva.Rect).strokeWidth());
   }
   refreshFormatList(true);
+  syncNativeNote();
+}
+
+/** 勾選「使用印表機原生指令列印」時：TSPL 以外的語言標示「實驗中」；該語言沒有這種物件的原生指令時說明會用點陣 */
+function syncNativeNote(): void {
+  const el = $("native-exp");
+  const lang = activeLang();
+  if (!selected || !$<HTMLInputElement>("prop-native").checked || isOffice() || lang === "tspl") { el.hidden = true; return; }
+  const kind = kindOf(selected) === "qr" ? "qr" : "barcode";
+  const ok = nativeSupported(lang, kind, String(selected.getAttr("format") ?? "CODE128"), !!selected.getAttr("showText"));
+  el.hidden = false;
+  el.classList.toggle("warn", ok);
+  setIconText(el, ok ? "flask" : "info", ok ? tr("實驗中：這個印表機語言的原生指令尚未在實機驗證，請回報列印結果") : tr("這個印表機語言沒有這種物件（或這種設定）的原生指令，仍以點陣列印"));
 }
 
 function applyPanel(): void {
@@ -562,8 +618,12 @@ function updateQrInfo(): void {
   const per = size / n;
   const mm = (size / DOTS_PER_MM).toFixed(1);
   const integer = Number.isInteger(per);
-  info.textContent = tr("{n} × {n} 個模組，每個約 {per} 點，全寬 {mm} mm。", { n, per: per.toFixed(2), mm }) +
-    (integer ? tr("✓ 每個模組是整數點，列印最清晰。") : per < 2.5 ? tr("⚠ 模組太小且不是整數點，建議放大或按「對齊整數模組」。") : tr("模組寬度會有 ±1 點的差異；要最清晰請按「對齊整數模組」。"));
+  const tail = integer ? { icon: "circle-check", text: tr("每個模組是整數點，列印最清晰。") }
+    : per < 2.5 ? { icon: "triangle-alert", text: tr("模組太小且不是整數點，建議放大或按「對齊整數模組」。") }
+    : { icon: null, text: tr("模組寬度會有 ±1 點的差異；要最清晰請按「對齊整數模組」。") };
+  info.replaceChildren(document.createTextNode(tr("{n} × {n} 個模組，每個約 {per} 點，全寬 {mm} mm。", { n, per: per.toFixed(2), mm }) + " "));
+  if (tail.icon) { const ic = iconEl(tail.icon, "ic info-ic"); info.append(ic); }
+  info.append(document.createTextNode(tail.text));
   info.classList.toggle("warn", !integer && per < 2.5);
   snap.disabled = integer;
 }
@@ -618,9 +678,12 @@ function scanVariables(): void {
 }
 
 /** 「插入變數」下拉選單：優先列出 Excel 的欄位，其次是範本用過與測試資料中的欄位 */
+/** 目前可用的資料欄位名稱：資料來源的欄位、標籤上已用到的變數、測試資料裡的欄位 */
+const variableNames = (): string[] => [...new Set([...tableHeaders(), ...usedVariables(), ...Object.keys(parseVars($<HTMLTextAreaElement>("vars").value))])];
+
 function refreshVarSelect(): void {
   const sel = $<HTMLSelectElement>("var-insert");
-  const names = [...new Set([...tableHeaders(), ...usedVariables(), ...Object.keys(parseVars($<HTMLTextAreaElement>("vars").value))])];
+  const names = variableNames();
   sel.replaceChildren(new Option(names.length ? tr("插入變數…") : tr("（尚無可用欄位）"), ""), ...names.map((n) => new Option(`{{${n}}}`, n)));
   sel.value = "";
   sel.disabled = names.length === 0;
@@ -866,6 +929,7 @@ async function openTemplate(): Promise<void> {
 async function newLabel(): Promise<void> {
   try {
     if (!(await confirmDiscard(N("建立新標籤")))) return;
+    if (!(await askNewSize())) return;
     buildStage();
     refreshLayers();
     resetHistory();
@@ -914,25 +978,25 @@ function fileMenuItems(): MenuItem[] {
     ? recent.slice(0, 9).map((p, i) => ({ label: `${i + 1}　${baseName(p)}`, hint: shortDir(p), onClick: () => void openRecent(p) }))
     : [{ label: tr("（沒有最近開啟的檔案）"), disabled: true }];
   return [
-    { label: tr("開啟新檔"), hint: "Ctrl+N", onClick: () => void newLabel() },
-    { label: tr("開啟舊檔…"), hint: "Ctrl+O", onClick: () => void openTemplate() },
+    { icon: "file-plus", label: tr("開啟新檔"), hint: "Ctrl+N", onClick: () => void newLabel() },
+    { icon: "open", label: tr("開啟舊檔…"), hint: "Ctrl+O", onClick: () => void openTemplate() },
     { separator: true },
-    { label: tr("儲存"), hint: "Ctrl+S", onClick: () => void saveTemplate() },
-    { label: tr("另存新檔…"), hint: "Ctrl+Shift+S", onClick: () => void saveTemplate(true) },
+    { icon: "save", label: tr("儲存"), hint: "Ctrl+S", onClick: () => void saveTemplate() },
+    { icon: "save-all", label: tr("另存新檔…"), hint: "Ctrl+Shift+S", onClick: () => void saveTemplate(true) },
     { separator: true },
     ...recentItems,
-    ...(recent.length ? [{ separator: true } as MenuItem, { label: tr("清除最近開啟記錄"), onClick: () => { clearRecent(); setStatus(tr("已清除最近開啟記錄"), "ok"); } }] : []),
+    ...(recent.length ? [{ separator: true } as MenuItem, { icon: "eraser", label: tr("清除最近開啟記錄"), onClick: () => { clearRecent(); setStatus(tr("已清除最近開啟記錄"), "ok"); } }] : []),
   ];
 }
 
 const insertMenuItems = (): MenuItem[] => [
-  { label: tr("文字"), onClick: () => $("add-text").click() },
-  { label: "QR Code", onClick: () => $("add-qr").click() },
-  { label: tr("條碼"), onClick: () => $("add-barcode").click() },
+  { icon: "type", label: tr("文字"), onClick: () => $("add-text").click() },
+  { icon: "qr", label: "QR Code", onClick: () => $("add-qr").click() },
+  { icon: "barcode", label: tr("條碼"), onClick: () => $("add-barcode").click() },
   { separator: true },
-  { label: tr("矩形"), onClick: () => $("add-rect").click() },
-  { label: tr("線條"), onClick: () => $("add-line").click() },
-  { label: tr("圖片…"), onClick: () => $("add-image").click() },
+  { icon: "square", label: tr("矩形"), onClick: () => $("add-rect").click() },
+  { icon: "minus", label: tr("線條"), onClick: () => $("add-line").click() },
+  { icon: "image", label: tr("圖片…"), onClick: () => $("add-image").click() },
 ];
 
 function editMenuItems(): MenuItem[] {
@@ -941,21 +1005,21 @@ function editMenuItems(): MenuItem[] {
   const none = sel.length === 0;
   const gids = new Set(sel.map((x) => (x.getAttr("groupId") as string | undefined) ?? ""));
   return [
-    { label: tr("復原"), hint: "Ctrl+Z", disabled: !canUndo(), onClick: () => void undo() },
-    { label: tr("重做"), hint: "Ctrl+Y", disabled: !canRedo(), onClick: () => void redo() },
+    { icon: "undo", label: tr("復原"), hint: "Ctrl+Z", disabled: !canUndo(), onClick: () => void undo() },
+    { icon: "redo", label: tr("重做"), hint: "Ctrl+Y", disabled: !canRedo(), onClick: () => void redo() },
     { separator: true },
-    { label: tr("剪下"), hint: "Ctrl+X", disabled: none, onClick: () => cutNodes(sel) },
-    { label: tr("複製"), hint: "Ctrl+C", disabled: none, onClick: () => copyNodes(sel) },
-    { label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
-    { label: tr("重複"), hint: "Ctrl+D", disabled: none, onClick: () => void duplicateNodes(sel) },
+    { icon: "scissors", label: tr("剪下"), hint: "Ctrl+X", disabled: none, onClick: () => cutNodes(sel) },
+    { icon: "copy", label: tr("複製"), hint: "Ctrl+C", disabled: none, onClick: () => copyNodes(sel) },
+    { icon: "paste", label: tr("貼上"), hint: "Ctrl+V", disabled: !clip.length, onClick: () => void pasteClip() },
+    { icon: "copy-plus", label: tr("重複"), hint: "Ctrl+D", disabled: none, onClick: () => void duplicateNodes(sel) },
     { separator: true },
-    { label: tr("全選"), hint: "Ctrl+A", onClick: selectAll },
-    { label: tr("群組"), hint: "Ctrl+G", disabled: !(sel.length >= 2 && !(gids.size === 1 && !gids.has(""))), onClick: groupSelection },
-    { label: tr("取消群組"), hint: "Ctrl+Shift+G", disabled: !sel.some((x) => x.getAttr("groupId")), onClick: ungroupSelection },
+    { icon: "select-all", label: tr("全選"), hint: "Ctrl+A", onClick: selectAll },
+    { icon: "group", label: tr("群組"), hint: "Ctrl+G", disabled: !(sel.length >= 2 && !(gids.size === 1 && !gids.has(""))), onClick: groupSelection },
+    { icon: "ungroup", label: tr("取消群組"), hint: "Ctrl+Shift+G", disabled: !sel.some((x) => x.getAttr("groupId")), onClick: ungroupSelection },
     { separator: true },
-    { label: tr("刪除"), hint: "Delete", disabled: none, onClick: () => removeSelected() },
+    { icon: "trash", label: tr("刪除"), hint: "Delete", disabled: none, onClick: () => removeSelected() },
     { separator: true },
-    { label: tr("屬性…"), hint: "Alt+Enter", disabled: !n, onClick: () => n && openProps(n) },
+    { icon: "sliders", label: tr("屬性…"), hint: "Alt+Enter", disabled: !n, onClick: () => n && openProps(n) },
   ];
 }
 
@@ -971,10 +1035,15 @@ const LANG_TAG: Record<Lang, string> = { "zh-TW": "繁", "zh-CN": "简", en: "EN
 const updateLangTag = (): void => { const el = document.querySelector("#lang-btn .lang-tag"); if (el) el.textContent = LANG_TAG[currentLang()]; };
 
 const viewMenuItems = (): MenuItem[] => [
-  { label: tr("預覽列印"), hint: "Ctrl+P", onClick: () => void openPreview() },
+  { icon: "eye", label: tr("預覽列印"), hint: "Ctrl+P", onClick: () => previewAction() },
   { separator: true },
-  { label: tr("對齊線（拖曳時吸附）"), hint: guidesEnabled() ? "✓" : "", onClick: () => { setGuidesEnabled(!guidesEnabled()); setStatus(guidesEnabled() ? tr("對齊線：開（拖曳時靠近邊緣或其他物件會吸附；按住 Alt 可暫時不吸附）") : tr("對齊線：關"), "ok"); } },
-  { label: tr("側邊面板"), hint: sidePanel().hidden ? "" : "✓", onClick: () => { sidePanel().hidden = !sidePanel().hidden; window.dispatchEvent(new Event("resize")); } },
+  { icon: "zoom-in", label: tr("放大"), hint: "Ctrl++", onClick: () => zoomBy(1.25) },
+  { icon: "zoom-out", label: tr("縮小"), hint: "Ctrl+-", onClick: () => zoomBy(0.8) },
+  { icon: "maximize", label: tr("符合視窗"), hint: "Ctrl+0", onClick: zoomFit },
+  { icon: "focus", label: tr("實際大小 (100%)"), hint: "Ctrl+1", onClick: zoomActual },
+  { separator: true },
+  { icon: "magnet", label: tr("對齊線（拖曳時吸附）"), hint: guidesEnabled() ? "✓" : "", onClick: () => { setGuidesEnabled(!guidesEnabled()); setStatus(guidesEnabled() ? tr("對齊線：開（拖曳時靠近邊緣或其他物件會吸附；按住 Alt 可暫時不吸附）") : tr("對齊線：關"), "ok"); } },
+  { icon: "panel", label: tr("側邊面板"), hint: sidePanel().hidden ? "" : "✓", onClick: () => { sidePanel().hidden = !sidePanel().hidden; window.dispatchEvent(new Event("resize")); } },
 ];
 
 /** 切換介面語言：立即套用到靜態文字，並重畫目前看得到的動態文字；選擇會記住 */
@@ -1004,24 +1073,25 @@ for (const b of document.querySelectorAll<HTMLElement>("[data-dlg-close]")) {
 
 function toolsMenuItems(): MenuItem[] {
   return [
-    { label: tr("變數測試資料…"), onClick: () => openSettings("dlg-vars") },
-    { label: tr("紙張與標籤尺寸…"), onClick: () => openSettings("dlg-paper") },
-    { label: tr("列印品質與出紙…"), onClick: () => openSettings("dlg-quality") },
-    { label: tr("印表機…"), onClick: () => openSettings("dlg-printer") },
+    { icon: "braces", label: tr("變數測試資料…"), onClick: () => openSettings("dlg-vars") },
+    { icon: "ruler", label: tr("紙張與標籤尺寸…"), onClick: () => openSettings("dlg-paper") },
+    { icon: "gauge", label: tr("列印品質與出紙…"), onClick: () => openSettings("dlg-quality") },
+    { icon: "printer", label: tr("印表機…"), onClick: () => openSettings("dlg-printer") },
     { separator: true },
-    { label: tr("產生校正標籤"), onClick: () => void openCalibration() },
-    { label: tr("重新讀取資料來源"), disabled: $("data-panel").hidden, onClick: () => $("data-reload").click() },
+    { icon: "scan", label: tr("產生校正標籤"), onClick: () => void openCalibration() },
+    { icon: "refresh", label: tr("重新讀取資料來源"), disabled: $("data-panel").hidden, onClick: () => $("data-reload").click() },
   ];
 }
 
 const helpMenuItems = (): MenuItem[] => [
-  { label: tr("關於 Label Printer"), onClick: () => void showAbout() },
-  { label: tr("第三方授權聲明"), onClick: () => showLicenses() },
+  { icon: "info", label: tr("關於 Label Printer"), onClick: () => void showAbout() },
+  { icon: "scale", label: tr("第三方授權聲明"), onClick: () => showLicenses() },
   { separator: true },
-  { label: tr("檢查新版本"), onClick: () => void checkForUpdate() },
-  { label: tr("新功能"), onClick: () => void showWhatsNew() },
+  { icon: "download", label: tr("檢查新版本"), onClick: () => void checkForUpdate() },
+  { icon: "sparkles", label: tr("新功能"), onClick: () => void showWhatsNew() },
   { separator: true },
-  { label: tr("啟動時自動檢查更新"), hint: autoCheckEnabled() ? "✓" : "", onClick: () => { setAutoCheck(!autoCheckEnabled()); setStatus(autoCheckEnabled() ? tr("已開啟：啟動時自動檢查更新") : tr("已關閉：啟動時不再自動檢查更新"), "ok"); } },
+  { icon: "door-open", label: tr("啟動時顯示歡迎視窗"), hint: startDisabled() ? "" : "✓", onClick: () => { setStartDisabled(!startDisabled()); setStatus(startDisabled() ? tr("已關閉：啟動時不再顯示歡迎視窗") : tr("已開啟：啟動時顯示歡迎視窗"), "ok"); } },
+  { icon: "refresh", label: tr("啟動時自動檢查更新"), hint: autoCheckEnabled() ? "✓" : "", onClick: () => { setAutoCheck(!autoCheckEnabled()); setStatus(autoCheckEnabled() ? tr("已開啟：啟動時自動檢查更新") : tr("已關閉：啟動時不再自動檢查更新"), "ok"); } },
 ];
 
 // ---------- 渲染 & 列印 ----------
@@ -1029,7 +1099,31 @@ const helpMenuItems = (): MenuItem[] => [
 let lastRenderSizes: number[] = [];
 
 /** 以指定資料列渲染成 1-bit 點陣（暫時替換變數，渲染完還原） */
-function renderBitmap(row: Row, natives?: NativeCode[]) {
+function renderBitmap(row: Row, natives?: NativeCode[], lang = "tspl") {
+  return withRow(row, natives, () => canvasToMono(stageToCanvas(1), thresholdOf(settings)), lang); // 「字體加粗」會提高門檻，讓筆畫更粗更黑
+}
+
+/** 以指定資料列渲染成彩色畫布（不二值化），pixelRatio＝每 dot 幾個像素；給 A4／貼紙紙排版用 */
+function renderLabelCanvas(row: Row, pixelRatio: number): HTMLCanvasElement {
+  return withRow(row, undefined, () => stageToCanvas(pixelRatio));
+}
+
+/** 輸出時暫時把畫面還原為 1:1，確保輸出尺寸永遠剛好等於標籤的 dots × 倍率，不受畫面縮放影響 */
+function stageToCanvas(pixelRatio: number): HTMLCanvasElement {
+  const w = mmToDots(settings.tplWmm);
+  const h = mmToDots(settings.tplHmm);
+  const view = { size: stage.size(), scale: stage.scale() };
+  stage.size({ width: w, height: h });
+  stage.scale({ x: 1, y: 1 });
+  const canvas = stage.toCanvas({ pixelRatio });
+  stage.size(view.size);
+  stage.scale(view.scale);
+  transformer.show();
+  return canvas;
+}
+
+/** 暫時把資料列套進所有物件（替換變數、縮小文字、重畫條碼）後執行 draw，結束時還原設計畫面 */
+function withRow<T>(row: Row, natives: NativeCode[] | undefined, draw: () => T, lang = "tspl"): T {
   const original = new Map<Konva.Text, string>();
   const hiddenNative: Konva.Shape[] = [];
   const nodes = elements();
@@ -1045,24 +1139,14 @@ function renderBitmap(row: Row, natives?: NativeCode[]) {
         refreshCode(n as Konva.Image, row);
         // 實際列印時，啟用「原生指令」的條碼／QR 不畫進點陣，改由印表機指令列印（預覽沒有傳 natives，仍以點陣近似顯示）
         if (natives && n.visible()) {
-          const c = nativeCodeFor(n as Konva.Image, row);
+          const c = nativeCodeFor(n as Konva.Image, row, lang);
           if (c) { natives.push(c); n.visible(false); hiddenNative.push(n); }
         }
       }
     }
     lastRenderSizes = nodes.filter((n) => kindOf(n) === "text").map((n) => (n as Konva.Text).fontSize());
     transformer.hide();
-    // 輸出時暫時把畫面還原為 1:1，確保點陣尺寸永遠剛好等於範本的 dots，不受畫面縮放影響
-    const w = mmToDots(settings.tplWmm);
-    const h = mmToDots(settings.tplHmm);
-    const view = { size: stage.size(), scale: stage.scale() };
-    stage.size({ width: w, height: h });
-    stage.scale({ x: 1, y: 1 });
-    const canvas = stage.toCanvas({ pixelRatio: 1 });
-    stage.size(view.size);
-    stage.scale(view.scale);
-    transformer.show();
-    return canvasToMono(canvas, thresholdOf(settings)); // 「字體加粗」會提高門檻，讓筆畫更粗更黑
+    return draw();
   } finally {
     for (const n of hiddenNative) n.visible(true);
     original.forEach((v, t) => { t.text(v); fitText(t); }); // 還原設計畫面的內容，並依原內容重新套用最大範圍
@@ -1163,9 +1247,12 @@ function placement(bmp: PackedBitmap): { offsetX: number; offsetY: number } {
 /** 把一筆資料列渲染成送給後端的列印工作 */
 function makeJob(row: Row) {
   const natives: NativeCode[] = [];
-  const bmp = renderBitmap(row, natives);
+  const lang = activeLang();
+  // 原生條碼／QR：各語言能做的物件不同（nativeSupported），不能的自動退回點陣
+  const bmp = renderBitmap(row, natives, lang);
   const place = placement(bmp);
   return {
+    lang,
     natives,
     paperWmm: settings.paperWmm,
     paperHmm: settings.paperHmm,
@@ -1185,6 +1272,22 @@ function makeJob(row: Row) {
 
 /** 每一列資料印一組（每筆張數見工具列），全部合成同一個列印工作送出 */
 async function printRows(rows: Row[], raws: RawRow[] = []): Promise<void> {
+  await detecting; // 剛選印表機、驅動偵測還沒回來時先等它
+  // 選的是一般印表機（不是標籤機）：不送標籤指令，改成 A4／貼紙紙排版列印（排版對話框會使用勾選的資料列）
+  if (isOffice()) { void openSheet(); return; }
+  // 「自動偵測」卻認不出這台是什麼：不替使用者猜（猜成標籤機會把指令碼送到事務機，印出亂碼）。
+  // 開發模式（自動化測試的模擬後端沒有偵測命令）例外
+  if (settings.printerMode === "windows" && settings.printerName && settings.printerLang === "auto" && detectedLang === null && !(import.meta.env.DEV && detectFailed)) {
+    setStatus(tr("無法判斷這台是不是標籤機：請先在「工具 → 印表機…」選擇印表機語言，或選「一般印表機」"), "err");
+    if (!settings.setupDone) openSetup(); else openSettings("dlg-printer");
+    return;
+  }
+  // 還沒選印表機就不送出（避免印到別台）：帶使用者去選
+  if (settings.printerMode === "windows" && !settings.printerName) {
+    setStatus(tr("尚未選擇印表機：請先選擇要用來列印標籤的印表機"), "err");
+    if (!settings.setupDone) openSetup(); else openSettings("dlg-printer");
+    return;
+  }
   try {
     const target =
       settings.printerMode === "windows"
@@ -1215,7 +1318,7 @@ function insertVariable(name: string): void {
 
 // ---------- 設定欄位綁定 ----------
 const numFields: Array<[string, keyof Settings]> = [
-  ["paper-w", "paperWmm"], ["paper-h", "paperHmm"], ["tpl-w", "tplWmm"], ["tpl-h", "tplHmm"], ["gap", "gapMm"], ["port", "port"],
+  ...SIZE_FIELDS.map((f): [string, keyof Settings] => [f.id, f.key]), ["port", "port"],
 ];
 
 function syncSettingsInputs(): void {
@@ -1298,13 +1401,164 @@ function bindSettings(): void {
     settings.printerMode = mode.value as Settings["printerMode"];
     saveSettings(settings);
     applyMode();
+    renderLangSelect();
+    void detectPrinterLang();
   });
   applyMode();
 
   const name = $<HTMLSelectElement>("printer-name");
-  name.addEventListener("change", () => { settings.printerName = name.value; saveSettings(settings); });
+  name.addEventListener("change", () => { settings.printerName = name.value; saveSettings(settings); void detectPrinterLang(); syncSetupOk(); });
   $("refresh-printers").addEventListener("click", () => void loadPrinters());
-  void loadPrinters();
+  const lang = $<HTMLSelectElement>("printer-lang");
+  lang.addEventListener("change", () => { settings.printerLang = lang.value; saveSettings(settings); renderLangHint(); syncSetupOk(); });
+  renderLangSelect();
+  // 首次設定：開發模式（自動化測試都跑在開發伺服器上）預設略過，需要時用 localStorage 的 lp.wizard=1 開啟；正式版一律會問
+  if (import.meta.env.DEV && !wizardOn()) settings.setupDone = true;
+  host.addEventListener("input", syncSetupOk);
+  mode.addEventListener("change", syncSetupOk);
+  $("printer-setup-ok").addEventListener("click", finishSetup);
+  $("printer-setup-later").addEventListener("click", () => $<HTMLDialogElement>("dlg-printer").close());
+  $<HTMLDialogElement>("dlg-printer").addEventListener("close", () => setSetupMode(false)); // Esc 也算「稍後再設定」
+  // 首次設定結束（或不需要）之後才會問「新標籤／舊標籤」，兩個對話框不會疊在一起
+  setupFlow = loadPrinters().catch(() => { /* 列不出印表機也要繼續 */ }).then(() => new Promise<void>((res) => {
+    if (settings.setupDone) { res(); return; }
+    openSetup();
+    $<HTMLDialogElement>("dlg-printer").addEventListener("close", () => res(), { once: true });
+  }));
+}
+let setupFlow: Promise<void> = Promise.resolve();
+
+// ---------- 首次設定：選擇列印用的印表機與語言 ----------
+const wizardOn = (): boolean => { try { return localStorage.getItem("lp.wizard") === "1"; } catch { return false; } };
+
+function setSetupMode(on: boolean): void {
+  $("printer-title").hidden = on;
+  $("printer-title-setup").hidden = !on;
+  $("printer-setup-msg").hidden = !on;
+  $("printer-setup-ok").hidden = !on;
+  $("printer-setup-later").hidden = !on;
+  $("printer-close").hidden = on;
+  if (on) syncSetupOk();
+}
+
+/** 「確定」要等選好印表機（Windows）或填了位址（直連 TCP）才能按，避免不小心略過 */
+function syncSetupOk(): void {
+  // 位址欄位打字時 settings.host 還沒更新（離開欄位才寫入），所以直接讀欄位的目前內容
+  // Windows：要選了印表機，而且知道它是不是標籤機（自動偵測沒結果時，要使用者自己選語言或「一般印表機」，不替他猜）
+  const known = settings.printerLang !== "auto" || detectedLang !== null;
+  const ok = settings.printerMode === "windows" ? !!settings.printerName && known : !!$<HTMLInputElement>("host").value.trim();
+  $<HTMLButtonElement>("printer-setup-ok").disabled = !ok;
+}
+
+function openSetup(): void {
+  const dlg = $<HTMLDialogElement>("dlg-printer");
+  if (dlg.open) return;
+  setSetupMode(true);
+  dlg.showModal();
+}
+
+function finishSetup(): void {
+  settings.setupDone = true;
+  saveSettings(settings);
+  $<HTMLDialogElement>("dlg-printer").close();
+  const printer = settings.printerMode === "windows" ? settings.printerName : `${settings.host}:${settings.port}`;
+  setStatus(tr("已設定列印用的印表機：{printer}（可在「工具 → 印表機…」更改）", { printer }), "ok");
+}
+
+// ---------- 印表機語言 ----------
+/** 依驅動程式名稱偵測到的語言（只在 Windows 模式、尚未猜出時為 null）與驅動名稱 */
+let detectedLang: string | null = null;
+let detectedDriver = "";
+
+/** 目前實際使用的印表機語言：Windows 模式選「自動」時用偵測結果（猜不出來退回 TSPL）；直連 TCP 沒有驅動可看，只用自己選的 */
+function activeLang(): string {
+  const l = settings.printerLang;
+  if (l !== "auto" && l !== "office") return l;
+  if (settings.printerMode !== "windows" || l === "office") return "tspl"; // 一般印表機不送標籤指令（isOffice 時列印改走排版），這個值不會用到
+  return detectedLang && detectedLang !== "office" ? detectedLang : "tspl";
+}
+
+/** 目前選的是不是「一般印表機」（不是標籤機）：手動選了「一般印表機」，或自動偵測驅動判斷為事務機／虛擬印表機。此時列印與預覽一律改成 A4／貼紙紙排版 */
+function isOffice(): boolean {
+  if (settings.printerMode !== "windows") return false;
+  return settings.printerLang === "office" || (settings.printerLang === "auto" && detectedLang === "office");
+}
+
+/** 預覽列印：標籤機看標籤的預覽；一般印表機直接進 A4／貼紙紙排版（對話框本身就有整頁預覽） */
+function previewAction(): void {
+  if (isOffice()) void openSheet();
+  else void openPreview();
+}
+
+function renderLangSelect(): void {
+  const sel = $<HTMLSelectElement>("printer-lang");
+  const opts = PRINT_LANGS.map((l) => new Option(l.id === "tspl" ? l.name : `${l.name} ${tr("（實驗）")}`, l.id)); // TSPL 以外尚未在實機驗證
+  if (settings.printerMode === "windows") {
+    opts.unshift(new Option(tr("自動偵測（依驅動程式名稱）"), "auto"));
+    opts.push(new Option(tr("一般印表機（不是標籤機：改用 A4／貼紙紙排版列印）"), "office"));
+  }
+  sel.replaceChildren(...opts);
+  sel.value = settings.printerMode === "windows" ? settings.printerLang : activeLang();
+  renderLangHint();
+}
+
+function renderLangHint(): void {
+  syncNativeNote();
+  const hint = $("printer-lang-hint");
+  const lang = activeLang();
+  const lines: string[] = [];
+  let experimental = "";
+  if (settings.printerMode === "tcp") {
+    lines.push(tr("直連 Raw TCP 沒有驅動程式可以判斷，請選擇這台標籤機使用的語言。"));
+  } else if (isOffice()) {
+    lines.push(tr("這是一般印表機（不是標籤機）：按「列印」與「預覽列印」時會改用 A4／貼紙紙排版。"));
+  } else if (settings.printerLang === "auto") {
+    const name = PRINT_LANGS.find((l) => l.id === detectedLang)?.name;
+    lines.push(
+      name ? tr("偵測到：{lang}（驅動程式：{driver}）", { lang: name, driver: detectedDriver })
+        : tr("無法判斷這台是不是標籤機，請在上方「印表機語言」自己選：標籤機使用的語言，或「一般印表機」。"),
+    );
+  }
+  if (!isOffice() && lang !== "tspl") experimental = tr("實驗性質：這個語言尚未在實機上驗證。預設只傳送點陣圖；條碼與 QR Code 若在屬性勾選「使用印表機原生指令列印」，則改用印表機自己的指令（同樣是實驗中，歡迎回報結果）。");
+  const rows = lines.map((text) => ({ text, icon: null as string | null }));
+  if (experimental) rows.push({ text: experimental, icon: "flask" });
+  hint.replaceChildren(...rows.map((r) => {
+    const div = document.createElement("div");
+    div.className = "hint-line";
+    if (r.icon) div.append(iconEl(r.icon));
+    const span = document.createElement("span");
+    span.textContent = r.text;
+    div.append(span);
+    return div;
+  }));
+}
+
+/** 偵測是否出錯（讀不到驅動程式資訊）。出錯與「讀到了但認不出來」都算猜不出來，列印時會擋下 */
+let detectFailed = false;
+/** 進行中的偵測：列印前要等它結束，才不會在剛啟動、偵測還沒回來時誤判「猜不出來」 */
+let detecting: Promise<void> = Promise.resolve();
+
+/** 向後端讀取目前 Windows 印表機的驅動程式名稱並猜語言（只在 Windows 模式） */
+function detectPrinterLang(): Promise<void> {
+  detecting = doDetect();
+  return detecting;
+}
+
+async function doDetect(): Promise<void> {
+  detectedLang = null;
+  detectedDriver = "";
+  detectFailed = false;
+  if (settings.printerMode === "windows" && settings.printerName) {
+    try {
+      const r = await invoke<{ lang: string | null; driver: string }>("detect_printer_language", { name: settings.printerName });
+      detectedLang = r.lang;
+      detectedDriver = r.driver;
+    } catch {
+      detectFailed = true;
+    }
+  }
+  renderLangHint();
+  syncSetupOk();
 }
 
 /** 向後端取得 Windows 已安裝的印表機清單，並保留先前的選擇 */
@@ -1312,21 +1566,32 @@ async function loadPrinters(): Promise<void> {
   const select = $<HTMLSelectElement>("printer-name");
   try {
     const names = await invoke<string[]>("list_printers");
-    select.replaceChildren(...names.map((n) => new Option(n, n)));
+    const opts = names.map((n) => new Option(n, n));
+    // 首次設定：不替使用者決定（常用的可能是事務機），清單最上面放「請選擇」，選了才能按確定
+    if (!settings.setupDone) opts.unshift(new Option(tr("（請選擇印表機）"), ""));
+    select.replaceChildren(...opts);
     if (names.includes(settings.printerName)) {
       select.value = settings.printerName;
+    } else if (!settings.setupDone) {
+      settings.printerName = "";
+      select.value = "";
+      saveSettings(settings);
     } else {
       // 優先挑名稱含 TSC/TTP 的印表機，否則取第一台
       settings.printerName = names.find((n) => /tsc|ttp/i.test(n)) ?? names[0] ?? "";
       select.value = settings.printerName;
       saveSettings(settings);
     }
+    void detectPrinterLang();
   } catch (e) {
     setStatus(tr("無法取得印表機清單：{err}", { err: String(e) }), "err");
   }
 }
 
 // ---------- 啟動 ----------
+attachFieldSuggest($<HTMLTextAreaElement>("prop-text"), variableNames, () => applyPanel()); // 輸入 {{ 時跳出欄位候選
+initStartDialogs({ settings, saveSettings, syncSettingsInputs, setStatus, newLabel, openTemplate, openRecent });
+buildSizeFields(); // 「屬性」視窗與「新增標籤」視窗共用同一份尺寸欄位定義
 bindSettings();
 buildStage();
 fitZoom();
@@ -1383,7 +1648,7 @@ $("print").addEventListener("click", print);
 $("preview-btn").addEventListener("click", () => void previewBitmap());
 initTable({
   onPreview: previewBitmap, onPrint: printRows, onInsertVar: insertVariable, onStatus: setStatus, onChange: refreshVarSelect,
-  onPrintPreview: () => void openPreview(),
+  onPrintPreview: () => previewAction(),
 });
 // 預覽列印：勾選了資料列就逐張預覽那些列，否則預覽「變數測試資料」的單張
 initPreview({
@@ -1412,7 +1677,52 @@ initPreview({
   },
   print: (rows, raws) => printRows(rows, raws),
 });
-$("preview-print").addEventListener("click", () => void openPreview());
+// 連線到資料庫（SQLite、Access、ODBC）：載入後與 Excel／CSV 走同一個資料表面板
+initDbDialog({ load: (path, sheet, label) => loadSource(path, sheet, label) });
+// 貼紙紙／A4 排版列印：資料來源與預覽列印相同（勾選的列，或「變數測試資料」）
+initSheet({
+  source: () => { const sel = selectedRows(); return sel ? { rows: sel.rows, raws: sel.raws } : { rows: [currentRow()], raws: [] }; },
+  copies: () => Math.max(1, Number($<HTMLInputElement>("copies").value) || 1),
+  labelMm: () => ({ w: settings.tplWmm, h: settings.tplHmm }),
+  resolve: (rows, raws) => resolveFormats(rows, raws),
+  render: (row, ratio) => renderLabelCanvas(row, ratio),
+  savePdf: async (bytes) => {
+    const path = await save({ filters: [{ name: "PDF", extensions: ["pdf"] }], defaultPath: "labels.pdf" });
+    if (!path) return null;
+    await invoke("write_binary_file", { path, data: toBase64(bytes) });
+    return path;
+  },
+  status: setStatus,
+});
+// 分割按鈕：原本的按鈕一鍵照舊，▾ 裡放另一種做法（A4／貼紙紙排版、資料庫連線）
+const NOT_LABEL = (): string => (isOffice() ? tr("目前選的是一般印表機") : "");
+const printMoreItems = (): MenuItem[] => [
+  { icon: "printer", label: tr("列印到標籤機"), hint: NOT_LABEL(), disabled: isOffice(), onClick: () => $("print").click() },
+  { icon: "sheet", label: tr("貼紙紙／A4 排版列印…"), onClick: () => void openSheet() },
+];
+const previewMoreItems = (): MenuItem[] => [
+  { icon: "eye", label: tr("預覽標籤列印"), hint: isOffice() ? NOT_LABEL() : "Ctrl+P", disabled: isOffice(), onClick: () => void openPreview() },
+  { icon: "sheet", label: tr("貼紙紙／A4 排版預覽…"), onClick: () => void openSheet() },
+];
+const dataMoreItems = (): MenuItem[] => [
+  { icon: "spreadsheet", label: tr("Excel／CSV／資料庫檔案…"), onClick: () => $("import-table").click() },
+  { icon: "database", label: tr("連線到資料庫…"), onClick: () => openDbDialog() },
+];
+// 工具列只留最常用的三種物件；矩形、線條、圖片收進 ▾（原按鈕仍在 DOM 內但隱藏，選單項目直接轉呼叫它們，邏輯只寫一處）
+addSplit("add-barcode", () => [
+  { icon: "square", label: tr("新增矩形"), onClick: () => $("add-rect").click() },
+  { icon: "minus", label: tr("新增線條"), onClick: () => $("add-line").click() },
+  { icon: "image", label: tr("新增圖片"), onClick: () => $("add-image").click() },
+], tr("更多物件"));
+addSplit("print", printMoreItems, tr("更多列印方式"));
+addSplit("preview-print", previewMoreItems, tr("更多預覽方式"));
+addSplit("import-table", dataMoreItems, tr("更多資料來源"));
+addSplit("data-print", () => [
+  { icon: "printer", label: tr("列印到標籤機"), hint: NOT_LABEL(), disabled: isOffice(), onClick: () => $("data-print").click() },
+  { icon: "sheet", label: tr("貼紙紙／A4 排版列印…"), onClick: () => void openSheet() },
+], tr("更多列印方式"));
+addSplit("data-preview", previewMoreItems, tr("更多預覽方式"));
+$("preview-print").addEventListener("click", () => previewAction());
 try { $<HTMLTextAreaElement>("vars").value = localStorage.getItem(VARS_KEY) ?? ""; } catch { /* 無法讀取則留空 */ }
 /** 條碼在畫布上顯示「變數測試資料」的內容；測試資料改了，畫布上的條碼（寬度）要跟著更新 */
 function refreshDesignBarcodes(): void {
@@ -1506,6 +1816,8 @@ updateTplLabel();
 for (const id of ["prop-text", "prop-font", "prop-size", "prop-bold", "prop-bounded", "prop-overflow", "prop-minsize", "prop-align", "prop-valign", "prop-format", "prop-modw", "prop-showtext", "prop-anchor", "prop-native", "prop-ec", "prop-filled", "prop-stroke"]) {
   $(id).addEventListener("input", applyPanel);
   $(id).addEventListener("change", applyPanel);
+  $(id).addEventListener("input", syncNativeNote);
+  $(id).addEventListener("change", syncNativeNote);
 }
 
 // 快捷鍵：Ctrl+S 儲存、Ctrl+Shift+S 另存新檔、Ctrl+O 開啟（在輸入框內也有效）
@@ -1515,8 +1827,26 @@ window.addEventListener("keydown", (e) => {
   if (k === "s") { e.preventDefault(); void saveTemplate(e.shiftKey); }
   else if (k === "o") { e.preventDefault(); void openTemplate(); }
   else if (k === "n") { e.preventDefault(); void newLabel(); }
-  else if (k === "p") { e.preventDefault(); void openPreview(); } // 攔下瀏覽器預設的列印對話框，改為「預覽列印」
+  else if (k === "p") { e.preventDefault(); previewAction(); } // 攔下瀏覽器預設的列印對話框，改為「預覽列印」
+  else if (!document.querySelector("dialog[open]")) {
+    // 縮放：Ctrl++／Ctrl+-／Ctrl+0（符合視窗）／Ctrl+1（100%）；也接受數字鍵盤
+    if (k === "=" || k === "+") { e.preventDefault(); zoomBy(1.25); }
+    else if (k === "-" || k === "_") { e.preventDefault(); zoomBy(0.8); }
+    else if (k === "0") { e.preventDefault(); zoomFit(); }
+    else if (k === "1") { e.preventDefault(); zoomActual(); }
+  }
 });
+
+// 縮放：Ctrl＋滾輪（或觸控板的捏合手勢，瀏覽器會當成 Ctrl＋滾輪）；一般滾輪維持捲動
+document.querySelector(".canvas-wrap")!.addEventListener("wheel", (e) => {
+  const we = e as WheelEvent;
+  if (!(we.ctrlKey || we.metaKey)) return;
+  e.preventDefault();
+  zoomBy(we.deltaY < 0 ? 1.1 : 1 / 1.1);
+}, { passive: false });
+$("zoom-in").addEventListener("click", () => zoomBy(1.25));
+$("zoom-out").addEventListener("click", () => zoomBy(0.8));
+$("zoom-label").addEventListener("click", zoomFit);
 
 // 快捷鍵：Ctrl+C 複製、Ctrl+X 剪下、Ctrl+V 貼上、Ctrl+D 重複、Alt+Enter 屬性。
 // 在輸入欄位內不攔截，才能正常複製貼上文字。
@@ -1603,8 +1933,14 @@ console.info(`Label Printer ready (${DOTS_PER_MM} dots/mm)`);
 void (async () => {
   try {
     const p = await invoke<string | null>("startup_file");
-    if (p) await loadLabelFile(p);
+    if (p) { await loadLabelFile(p); return; }
   } catch { /* 沒有 Tauri（瀏覽器開發／自動化測試）或沒有帶檔案：照常開空白標籤 */ }
+  // 直接開程式（沒有帶檔案）：問要建立新標籤還是開啟舊標籤。開發模式（自動化測試）預設略過，localStorage lp.start=1 可開啟
+  let devOn = false; try { devOn = localStorage.getItem("lp.start") === "1"; } catch { /* 略過 */ }
+  if (import.meta.env.DEV && !devOn) return;
+  if (startDisabled()) return;
+  await setupFlow;
+  showStart();
 })();
 
 // ---------- 關閉視窗前確認 ----------

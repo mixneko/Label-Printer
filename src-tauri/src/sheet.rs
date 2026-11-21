@@ -60,20 +60,30 @@ pub struct TableData {
     /// 與 `rows` 同樣大小的原始值（只有 Excel 的數字／日期儲存格有）；沒有的來源為空陣列
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub raw: Vec<Vec<Option<Raw>>>,
+    /// 來源種類：資料庫為 "db"（介面把「工作表」改稱「資料表」）；檔案類來源沒有這個欄位
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<&'static str>,
 }
 
 /// 讀進來的原始格子。`styles`、`raw` 要嘛為空，要嘛與 `rows` 同樣大小。
-struct Grid {
-    rows: Vec<Vec<String>>,
-    styles: Vec<Vec<Option<CellStyle>>>,
-    raw: Vec<Vec<Option<Raw>>>,
+pub(crate) struct Grid {
+    pub rows: Vec<Vec<String>>,
+    pub styles: Vec<Vec<Option<CellStyle>>>,
+    pub raw: Vec<Vec<Option<Raw>>>,
     /// `rows[0]` 對應的列號（Excel 為 1 起算的工作表列號）
-    first_row: u32,
+    pub first_row: u32,
     /// 是否保留資料列之間的空白列（Excel 為 true；CSV 等為 false）
-    keep_blank: bool,
+    pub keep_blank: bool,
 }
 
 pub fn read_table(path: &str, sheet: Option<&str>) -> Result<TableData, String> {
+    // 資料庫（SQLite、Access、ODBC）另外處理，結果同樣整理成「欄位標題 + 資料列」
+    if crate::dbsource::is_db_source(path) {
+        let (sheets, name, grid) = crate::dbsource::read(path, sheet)?;
+        let mut t = build_table(sheets, name, grid)?;
+        t.kind = Some("db");
+        return Ok(t);
+    }
     let ext = Path::new(path)
         .extension()
         .and_then(|e| e.to_str())
@@ -244,7 +254,7 @@ fn parse_csv(text: &str) -> Result<Vec<Vec<String>>, String> {
     Ok(grid)
 }
 
-fn build_table(sheets: Vec<String>, sheet: String, grid: Grid) -> Result<TableData, String> {
+pub(crate) fn build_table(sheets: Vec<String>, sheet: String, grid: Grid) -> Result<TableData, String> {
     let is_blank = |r: &Vec<String>| r.iter().all(|c| c.trim().is_empty());
     // 第一個非空白列是欄位標題
     let head_idx = grid.rows.iter().position(|r| !is_blank(r)).ok_or("這個工作表是空的")?;
@@ -314,7 +324,7 @@ fn build_table(sheets: Vec<String>, sheet: String, grid: Grid) -> Result<TableDa
             })
             .collect()
     };
-    Ok(TableData { sheets, sheet, headers, rows, row_numbers, styles, raw })
+    Ok(TableData { sheets, sheet, headers, rows, row_numbers, styles, raw, kind: None })
 }
 
 #[cfg(test)]
@@ -570,23 +580,24 @@ mod tests {
     #[test]
     fn bundled_samples_parse() {
         let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("samples");
-        let xlsx = dir.join("商品清單.xlsx");
-        let csv = dir.join("商品清單-big5.csv");
+        let xlsx = dir.join("sample-items.xlsx");
+        let csv = dir.join("sample-items-big5.csv");
         if !xlsx.exists() || !csv.exists() {
             return; // 範例檔由 `cargo run --example make_samples` 產生
         }
         let t = read_table(xlsx.to_str().unwrap(), None).unwrap();
-        assert_eq!(t.sheets, s(&["商品", "員工"]));
-        assert_eq!(t.headers, s(&["品名", "價格", "條碼", "產地", "有效日期"]));
+        assert_eq!(t.sheets, s(&["Items", "Spare Parts"]));
+        assert_eq!(t.headers, s(&["Item", "Code", "Lot", "Expiry"]));
         assert_eq!(t.rows.len(), 5);
-        // 範例檔的日期儲存格格式是 yyyy/mm/dd，標籤上要照 Excel 顯示成 2027/01/02（舊版會變成 2027-01-02）
-        assert_eq!(t.rows[1], s(&["香蕉", "12.5", "4710088000028", "菲律賓", "2027/01/02"]));
-        let e = read_table(xlsx.to_str().unwrap(), Some("員工")).unwrap();
-        assert_eq!(e.rows, vec![s(&["王小明", "A001"]), s(&["陳美麗", "A002"])]);
+        // 範例檔的日期儲存格格式是 yyyy/mm/dd，要照 Excel 顯示成 2028/01/31（舊版會變成 2028-01-31）
+        assert_eq!(t.rows[3], s(&["Hex Nut M3 Zinc", "A-1003", "B2701", "2028/01/31"]));
+        let e = read_table(xlsx.to_str().unwrap(), Some("Spare Parts")).unwrap();
+        assert_eq!(e.rows.len(), 2);
+        assert_eq!(e.rows[0][0], "Rubber Foot 10 mm");
 
         let c = read_table(csv.to_str().unwrap(), None).unwrap();
-        assert_eq!(c.headers, s(&["品名", "價格", "條碼", "產地"]));
-        assert_eq!(c.rows[2], s(&["橘子", "25", "4710088000035", "日本"]));
+        assert_eq!(c.headers, s(&["Item", "Code", "Lot", "Expiry"]));
+        assert_eq!(c.rows[0], s(&["不鏽鋼螺絲 M3x8", "A-1001", "B2611", "2027/11/30"]));
     }
 
     #[test]

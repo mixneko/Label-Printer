@@ -52,6 +52,7 @@ check("存出來的內容仍是 JSON（version 1、elements 陣列）", written.
 
 // 4) 全新標籤第一次儲存：預設檔名 label.lpxl
 await menu("開啟新檔");
+await ev("document.getElementById('new-ok').click()"); await sleep(300); // 新標籤會先問尺寸
 await ev("document.getElementById('add-rect').click()"); await sleep(400);
 await ev("window.__savePath = null");
 await menu("儲存");

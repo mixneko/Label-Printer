@@ -124,3 +124,31 @@ jobs:
             exit 1
           fi
           echo "latest.json 指向的 $URL_NAME 確實存在"
+
+  # 正式版（標籤沒有 -a／-b 這類預發行後綴）發布完成後，自動向 winget 送出版本更新（Pull Request 到 microsoft/winget-pkgs）。
+  # 用 Microsoft 官方的 wingetcreate；需要 Secret WINGET_TOKEN（見 winget/README.md），沒設定就略過，不影響上面的發布。
+  # 第一個版本要先手動送過一次，winget 上有了這個套件之後，這裡才接得上。
+  winget:
+    needs: build
+    if: github.ref_type == 'tag' && !contains(github.ref_name, '-') && github.server_url == 'https://github.com'
+    runs-on: windows-latest
+    permissions: {}
+    steps:
+      - name: 送出 winget 更新
+        shell: pwsh
+        # 失敗（例如 winget 上還沒有這個套件、或權杖過期）只顯示警告，不讓整個發布流程變紅
+        continue-on-error: true
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if (-not $env:WINGET_TOKEN) {
+            Write-Host "::notice::沒有設定 Secret WINGET_TOKEN，略過 winget 自動更新（設定方式見 winget/README.md）"
+            exit 0
+          }
+          $ver = $env:TAG.TrimStart('v')
+          $url = "https://github.com/$($env:REPO)/releases/download/$($env:TAG)/Label.Printer_$($ver)_x64-setup.exe"
+          Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          ./wingetcreate.exe update Mixneko.LabelPrinter --version $ver --urls $url --submit --token $env:WINGET_TOKEN
+          if ($LASTEXITCODE -ne 0) { Write-Host "::warning::wingetcreate 失敗（結束代碼 $LASTEXITCODE）。請確認 winget 上已有 Mixneko.LabelPrinter、權杖有效，或手動提交"; exit $LASTEXITCODE }

@@ -150,5 +150,5 @@ jobs:
           $ver = $env:TAG.TrimStart('v')
           $url = "https://github.com/$($env:REPO)/releases/download/$($env:TAG)/Label.Printer_$($ver)_x64-setup.exe"
           Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
-          ./wingetcreate.exe update Mixneko.LabelPrinter --version $ver --urls $url --submit --token $env:WINGET_TOKEN
+          ./wingetcreate.exe update b51.tw.LabelPrinter --version $ver --urls $url --submit --token $env:WINGET_TOKEN
           if ($LASTEXITCODE -ne 0) { Write-Host "::warning::wingetcreate 失敗（結束代碼 $LASTEXITCODE）。請確認 winget 上已有 Mixneko.LabelPrinter、權杖有效，或手動提交"; exit $LASTEXITCODE }

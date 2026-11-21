@@ -1,10 +1,11 @@
 # winget（Windows 套件管理員）
 
-讓使用者可以用 `winget install Mixneko.LabelPrinter` 安裝 Label Printer。
+讓使用者可以用 `winget install b51.tw.LabelPrinter` 安裝 Label Printer。
 
+- 套件識別碼是 `b51.tw.LabelPrinter`（送出後就固定，不能再改）；也可以用簡稱 `winget install label-printer`。
 - `manifests/` 是送給 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) 的安裝清單（資料夾結構和該倉庫一致）。
 - 由 `node scripts/make-winget.mjs <版本>` 產生：從 GitHub Release 下載安裝檔、算出 SHA256 再寫出清單。只接受正式版版本號。
-- 驗證：`winget validate --manifest winget/manifests/m/Mixneko/LabelPrinter/<版本>`
+- 驗證：`winget validate --manifest winget/manifests/b/b51/tw/LabelPrinter/<版本>`
 
 ## 一次性設定（只需要做一次）
 
@@ -14,7 +15,7 @@
 
 ```powershell
 winget install Microsoft.WingetCreate
-wingetcreate submit --token <你的 PAT> winget/manifests/m/Mixneko/LabelPrinter/1.0.0
+wingetcreate submit --token <你的 PAT> winget/manifests/b/b51/tw/LabelPrinter/1.0.0
 ```
 
 也可以自己 fork microsoft/winget-pkgs，把 `winget/manifests/` 底下的 `m` 資料夾放進該倉庫的 `manifests/`，再開 Pull Request。審查通常幾天內完成，審查機器人會實際安裝並掃描安裝檔。

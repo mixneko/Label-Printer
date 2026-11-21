@@ -1,5 +1,5 @@
 // 產生 winget（Windows 套件管理員）用的安裝清單：從 GitHub Release 下載安裝檔、算出 SHA256，寫出三個清單檔到
-//   winget/manifests/m/Mixneko/LabelPrinter/<版本>/
+//   winget/manifests/b/b51/tw/LabelPrinter/<版本>/
 // 這個目錄結構和 microsoft/winget-pkgs 倉庫一致，可以整個資料夾放進該倉庫送出 Pull Request（見 winget/README.md）。
 //   node scripts/make-winget.mjs 1.0.0
 // 只有正式版（沒有 -a／-b 後綴）才會被 winget 收錄；預發行版請不要送。
@@ -15,7 +15,7 @@ if (!/^\d+\.\d+\.\d+$/.test(version ?? "")) {
 }
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO = "mixneko/Label-Printer";
-const ID = "Mixneko.LabelPrinter";
+const ID = "b51.tw.LabelPrinter";
 const MANIFEST_VERSION = "1.10.0";
 // GitHub 會把檔名裡的空白換成句點
 const url = `https://github.com/${REPO}/releases/download/v${version}/Label.Printer_${version}_x64-setup.exe`;
@@ -30,7 +30,8 @@ const buf = Buffer.from(await res.arrayBuffer());
 const sha = createHash("sha256").update(buf).digest("hex").toUpperCase();
 console.log(`大小 ${buf.length} bytes，SHA256 ${sha}`);
 
-const dir = join(root, "winget", "manifests", "m", "Mixneko", "LabelPrinter", version);
+// microsoft/winget-pkgs 的資料夾規則：manifests/<識別碼第一個字母的小寫>/<識別碼每一段>/<版本>
+const dir = join(root, "winget", "manifests", ID[0].toLowerCase(), ...ID.split("."), version);
 mkdirSync(dir, { recursive: true });
 const header = (type) => `# yaml-language-server: $schema=https://aka.ms/winget-manifest.${type}.${MANIFEST_VERSION}.schema.json\n`;
 const write = (name, text) => writeFileSync(join(dir, name), text, { encoding: "utf8" });
@@ -63,7 +64,7 @@ ManifestVersion: ${MANIFEST_VERSION}
 write(`${ID}.locale.en-US.yaml`, header("defaultLocale") + `PackageIdentifier: ${ID}
 PackageVersion: ${version}
 PackageLocale: en-US
-Publisher: mixneko
+Publisher: b51.tw
 PublisherUrl: https://github.com/mixneko
 PublisherSupportUrl: https://github.com/${REPO}/issues
 Author: mixneko
@@ -98,7 +99,7 @@ ManifestVersion: ${MANIFEST_VERSION}
 write(`${ID}.locale.zh-TW.yaml`, header("locale") + `PackageIdentifier: ${ID}
 PackageVersion: ${version}
 PackageLocale: zh-TW
-Publisher: mixneko
+Publisher: b51.tw
 PublisherUrl: https://github.com/mixneko
 PublisherSupportUrl: https://github.com/${REPO}/issues
 Author: mixneko

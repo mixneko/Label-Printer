@@ -1,8 +1,8 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.locale.1.10.0.schema.json
-PackageIdentifier: Mixneko.LabelPrinter
+PackageIdentifier: b51.tw.LabelPrinter
 PackageVersion: 1.0.0
 PackageLocale: zh-TW
-Publisher: mixneko
+Publisher: b51.tw
 PublisherUrl: https://github.com/mixneko
 PublisherSupportUrl: https://github.com/mixneko/Label-Printer/issues
 Author: mixneko

@@ -300,9 +300,12 @@
       <div id="data-chips" class="chips" data-hint="點欄位可插入到選取的物件："></div>
       <div class="data-scroll"><table id="data-table"></table></div>
       <div id="data-pager" class="data-pager" hidden>
+        <button id="data-first" type="button" class="btn sm" title="第一頁">|&lt;</button>
         <button id="data-prev" type="button" class="btn sm">上一頁</button>
         <span id="data-page" class="page-label"></span>
+        <input id="data-goto" class="page-input" type="number" min="1" step="1" inputmode="numeric" placeholder="頁碼" title="輸入頁碼，按 Enter 跳到該頁" aria-label="頁碼" />
         <button id="data-next" type="button" class="btn sm">下一頁</button>
+        <button id="data-last" type="button" class="btn sm" title="最後一頁">&gt;|</button>
       </div>
     </section>
 

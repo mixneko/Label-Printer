@@ -567,6 +567,15 @@ export const de: Table = {
   "第 {p} 頁": "Seite {p}",
   "資料庫的資料是一頁一頁讀的，這裡只作用在目前這一頁": "Datenbankdaten werden seitenweise gelesen; dies gilt nur für die aktuelle Seite",
   "資料庫改為分頁讀取：每頁最多 1,000 列，幾萬筆的資料表也不會讓程式卡住；勾選的列換頁後仍會保留（Excel／CSV 列數很多時同樣分頁顯示）": "Datenbanken werden jetzt seitenweise gelesen: höchstens 1.000 Zeilen pro Seite, sodass Tabellen mit zehntausenden Zeilen das Programm nicht mehr einfrieren; markierte Zeilen bleiben beim Seitenwechsel erhalten (lange Excel-/CSV-Dateien werden ebenfalls seitenweise angezeigt)",
+  // v1.0.1 資料分頁
+  "第一頁": "Erste Seite",
+  "最後一頁": "Letzte Seite",
+  "頁碼": "Seitennr.",
+  "輸入頁碼，按 Enter 跳到該頁": "Seitenzahl eingeben und mit Enter zur Seite springen",
+  // v1.0.1 資料分頁
+  "資料表的分頁列新增「|<」第一頁、「>|」最後一頁，並可輸入頁碼直接跳到該頁，資料很多時不必一頁一頁翻": "Die Seitenleiste der Datentabelle hat jetzt |< (erste Seite) und >| (letzte Seite); außerdem können Sie eine Seitenzahl eingeben und direkt dorthin springen, sodass Sie bei vielen Daten nicht mehr Seite für Seite blättern müssen",
+  // v1.0.1 資料分頁
+  "記住上次選的工作表或資料表：下次開同一個 Excel 或資料庫檔案（以及同一個資料庫伺服器）時，直接回到那一個；連線對話框也會記住上次填的自訂查詢": "Merkt sich das zuletzt gewählte Arbeitsblatt bzw. die Tabelle: Beim nächsten Öffnen derselben Excel- oder Datenbankdatei (oder desselben Datenbankservers) geht es direkt dorthin zurück; der Verbindungsdialog merkt sich außerdem die zuletzt eingegebene eigene Abfrage",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Etikettenbogen / A4-Layout drucken…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "Die Felder ragen über das Papier hinaus. Verringern Sie die Spalten oder Zeilen oder die Ränder und Abstände.",

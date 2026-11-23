@@ -566,6 +566,15 @@ export const en: Table = {
   "第 {p} 頁": "Page {p}",
   "資料庫的資料是一頁一頁讀的，這裡只作用在目前這一頁": "Database data is read one page at a time; this only applies to the current page",
   "資料庫改為分頁讀取：每頁最多 1,000 列，幾萬筆的資料表也不會讓程式卡住；勾選的列換頁後仍會保留（Excel／CSV 列數很多時同樣分頁顯示）": "Databases are now read page by page: at most 1,000 rows per page, so tables with tens of thousands of rows no longer freeze the program; checked rows are kept when you change pages (long Excel/CSV files are paged too)",
+  // v1.0.1 資料分頁
+  "第一頁": "First page",
+  "最後一頁": "Last page",
+  "頁碼": "Page no.",
+  "輸入頁碼，按 Enter 跳到該頁": "Type a page number and press Enter to jump to it",
+  // v1.0.1 資料分頁
+  "資料表的分頁列新增「|<」第一頁、「>|」最後一頁，並可輸入頁碼直接跳到該頁，資料很多時不必一頁一頁翻": "The page bar of the data table now has |< (first page) and >| (last page), and you can type a page number to jump straight to it, so you no longer have to page through long data one page at a time",
+  // v1.0.1 資料分頁
+  "記住上次選的工作表或資料表：下次開同一個 Excel 或資料庫檔案（以及同一個資料庫伺服器）時，直接回到那一個；連線對話框也會記住上次填的自訂查詢": "Remembers the last worksheet or table you picked: the next time you open the same Excel or database file (or the same database server) it goes straight back to it; the connection dialog also remembers the custom query you last entered",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Sticker sheet / A4 layout print…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "The cells extend beyond the paper. Reduce the columns or rows, or reduce the margins and gaps.",

@@ -69,13 +69,14 @@ function loadLast(): void {
     for (const [id, k] of [["db-host", "host"], ["db-port", "port"], ["db-name", "name"], ["db-user", "user"]] as const) $<HTMLInputElement>(id).value = v[k] ?? "";
     $<HTMLInputElement>("db-winauth").checked = !!v.winauth;
     $<HTMLSelectElement>("db-security").value = ["verify", "trust", "off"].includes(v.security) ? v.security : "verify";
+    if (typeof v.sql === "string") $<HTMLTextAreaElement>("db-sql").value = v.sql;
   } catch { /* 沒有記錄就用預設 */ }
 }
 function saveLast(): void {
   try {
     localStorage.setItem(REMEMBER, JSON.stringify({
       kind: kindNow(), host: $<HTMLInputElement>("db-host").value, port: $<HTMLInputElement>("db-port").value,
-      name: $<HTMLInputElement>("db-name").value, user: $<HTMLInputElement>("db-user").value, winauth: $<HTMLInputElement>("db-winauth").checked, security: $<HTMLSelectElement>("db-security").value, // 密碼不記
+      name: $<HTMLInputElement>("db-name").value, user: $<HTMLInputElement>("db-user").value, winauth: $<HTMLInputElement>("db-winauth").checked, security: $<HTMLSelectElement>("db-security").value, sql: $<HTMLTextAreaElement>("db-sql").value, // 密碼不記
     }));
   } catch { /* 記不住也沒關係 */ }
 }

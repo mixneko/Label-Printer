@@ -285,7 +285,11 @@ details.help code { padding: 0 4px; background: color-mix(in srgb, var(--help-bo
 .data-scroll { flex: 1; overflow: auto; }
 .data-pager { flex: none; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 5px 14px; border-top: 1px solid var(--border); }
 .data-pager[hidden] { display: none; }
-.page-label { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.page-label { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.data-pager .btn { flex: none; white-space: nowrap; }
+#data-pager .page-input { flex: none; width: 64px; height: 26px; padding: 0 6px; font: inherit; font-size: 12.5px; text-align: center; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; font-variant-numeric: tabular-nums; }
+.page-input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+.page-input:disabled { opacity: .5; }
 #data-table { width: max-content; border-collapse: separate; border-spacing: 0; font-size: 13px; }
 #data-table th:nth-child(1), #data-table td:nth-child(1) { width: 40px; text-align: center; }
 #data-table th:nth-child(2), #data-table td:nth-child(2) { width: 44px; }

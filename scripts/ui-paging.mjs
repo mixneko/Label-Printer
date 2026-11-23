@@ -21,7 +21,7 @@ const MOCK = `(() => {
       const end = Math.min(N, off + lim);
       const rows = rowsOf(off, end);
       return { kind: 'db', sheets: ['items'], sheet: 'items', headers: ['Item', 'Code'], rows, rowNumbers: rows.map((_, i) => off + i + 1),
-        page: off === 0 ? { offset: off, limit: lim, total: N, more: end < N } : { offset: off, limit: lim, more: end < N } };
+        page: off === 0 && !ls('nototal', false) ? { offset: off, limit: lim, total: N, more: end < N } : { offset: off, limit: lim, more: end < N } };
     }
     return null; } };
 })();`;
@@ -41,6 +41,11 @@ const pageLabel = () => q("document.getElementById('data-page').textContent");
 const pagerHidden = () => q("document.getElementById('data-pager').hidden");
 const click = (id) => ev(`document.getElementById('${id}').click()`).then(() => sleep(350));
 const tick = (i) => ev(`(() => { const tr = document.querySelector('#data-table tr[data-i="${i}"]'); const cb = tr.querySelector('input'); cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+const dis = (id) => q(`document.getElementById('${id}').disabled`);
+const goto = async (v) => {
+  await ev(`(() => { const i = document.getElementById('data-goto'); i.focus(); i.value = ${JSON.stringify(String(v))}; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })()`);
+  await sleep(350);
+};
 const boxOn = (i) => q(`document.querySelector('#data-table tr[data-i="${i}"] input').checked`);
 
 // ===== 資料庫（2500 列）=====
@@ -87,6 +92,28 @@ const names = await q("document.getElementById('pv-page').textContent");
 check("資料庫：預覽第一張是第 1 列（名稱用資料庫的列號，不是「Excel 第」）", names.includes("第 1 列") && !names.includes("Excel"), names);
 await ev("document.getElementById('pv-close').click()"); await sleep(200);
 
+// ---- 第一頁／最後一頁／跳頁 ----
+check("第 1 頁：|< 停用、>| 可按、頁碼輸入框可輸入", (await dis("data-first")) === true && (await dis("data-last")) === false && (await dis("data-goto")) === false);
+await click("data-last");
+check(">| → 直接到最後一頁（offset 2000）、只有 500 列", JSON.stringify((await calls()).at(-1).offset) === "2000" && (await rowsShown()) === 500 && (await pageLabel()) === "第 3 / 3 頁（共 2500 列）", `${JSON.stringify((await calls()).at(-1))} ${await pageLabel()}`);
+check("最後一頁：>| 與「下一頁」停用，|< 可按", (await dis("data-last")) === true && (await dis("data-next")) === true && (await dis("data-first")) === false);
+await t.shot("pager");
+await click("data-first");
+check("|< → 回第一頁（offset 0）", (await pageLabel()) === "第 1 / 3 頁（共 2500 列）" && (await firstNum()) === "1", `${await pageLabel()} ${await firstNum()}`);
+await goto(2);
+check("輸入 2 按 Enter → 跳到第 2 頁（offset 1000），輸入框清空", (await pageLabel()) === "第 2 / 3 頁（共 2500 列）" && (await q("document.getElementById('data-goto').value")) === "" && (await firstNum()) === "1001", `${await pageLabel()} ${await firstNum()}`);
+await goto(99);
+check("輸入超過總頁數（99）→ 夾在最後一頁", (await pageLabel()) === "第 3 / 3 頁（共 2500 列）");
+await goto(0);
+check("輸入 0 → 夾在第一頁", (await pageLabel()) === "第 1 / 3 頁（共 2500 列）");
+const nCalls = (await calls()).length;
+await goto(1);
+check("輸入目前這一頁 → 不重讀", (await calls()).length === nCalls);
+await ev("(() => { const i = document.getElementById('data-goto'); i.focus(); i.value = ''; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })()"); await sleep(250);
+check("輸入框空白按 Enter → 不跳頁也不出錯", (await pageLabel()) === "第 1 / 3 頁（共 2500 列）");
+await ev("(() => { const i = document.getElementById('data-goto'); i.value = '3'; i.dispatchEvent(new Event('blur')); })()"); await sleep(250);
+check("輸入後沒按 Enter 就離開 → 不跳頁、輸入清空", (await pageLabel()) === "第 1 / 3 頁（共 2500 列）" && (await q("document.getElementById('data-goto').value")) === "");
+
 // 重新讀取：回到第 1 頁、勾選清空
 await click("data-reload");
 check("資料庫：重新讀取 → 回第 1 頁、勾選清空", (await pageLabel()) === "第 1 / 3 頁（共 2500 列）" && (await count()) === "已選 0 / 2500 列", `${await pageLabel()} ${await count()}`);
@@ -95,6 +122,17 @@ check("資料庫：重新讀取 → 回第 1 頁、勾選清空", (await pageLab
 await load("D:/data/small.sqlite", 40);
 check("資料庫：40 列（不到一頁）→ 沒有分頁列", (await pagerHidden()) === true && (await rowsShown()) === 40);
 check("資料庫：總數 40", (await count()) === "已選 0 / 40 列");
+
+// 沒有總列數（例如 Access／ODBC）：只能一頁一頁往後，所以 >| 與跳頁停用
+await ev("localStorage.setItem('t.nototal', 'true')");
+await load("D:/data/odbc.sqlite", 2500);
+check("無總列數：標籤只顯示「第 1 頁」", (await pageLabel()) === "第 1 頁", await pageLabel());
+check("無總列數：>| 與頁碼輸入框停用，但「下一頁」仍可用", (await dis("data-last")) === true && (await dis("data-goto")) === true && (await dis("data-next")) === false);
+await click("data-next");
+check("無總列數：下一頁仍能往後讀（第 2 頁）、|< 可回第一頁", (await pageLabel()) === "第 2 頁" && (await dis("data-first")) === false);
+await click("data-first");
+check("無總列數：|< 回第 1 頁", (await pageLabel()) === "第 1 頁");
+await ev("localStorage.removeItem('t.nototal')");
 
 // ===== Excel／CSV（2500 列，整份讀進來）=====
 await load("D:/data/big.xlsx", 2500);
@@ -106,7 +144,12 @@ check("Excel：全選選到全部 2500 列（不只這一頁）", (await count()
 await click("data-next");
 check("Excel：下一頁沒有再向後端讀取，第一列是 Excel 第 1001 筆（列號 1002）", (await calls()).length === 1 && (await firstNum()) === "1002", `${(await calls()).length} ${await firstNum()}`);
 check("Excel：換頁後這一頁的勾選仍是勾著（勾選屬於整份資料）", (await boxOn(1000)) === true);
-await click("data-next");
+await click("data-first");
+check("Excel：|< 回第 1 頁、不向後端讀", (await pageLabel()) === "第 1 / 3 頁（共 2500 列）" && (await calls()).length === 1);
+await goto(3);
+check("Excel：輸入 3 跳到最後一頁（只有 500 列）、不向後端讀", (await rowsShown()) === 500 && (await calls()).length === 1);
+await click("data-first"); await click("data-last");
+check("Excel：>| 直達最後一頁", (await pageLabel()) === "第 3 / 3 頁（共 2500 列）" && (await dis("data-last")) === true);
 check("Excel：最後一頁 500 列、「下一頁」停用", (await rowsShown()) === 500 && (await q("document.getElementById('data-next').disabled")) === true);
 await ev("document.getElementById('data-preview').click()"); await sleep(1200);
 check("Excel：預覽列印拿到全部 2500 筆", (await q("document.getElementById('pv-total').textContent")).startsWith("2500 筆資料"));

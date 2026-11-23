@@ -1,6 +1,6 @@
 [package]
 name = "label-printer"
-version = "1.0.1"
+version = "1.0.2"
 description = "標籤列印排版軟體"
 license = "MIT"
 edition = "2021"

@@ -139,8 +139,51 @@ function applyCellStyle(td: HTMLElement, s: CellStyle | null | undefined): void 
   if (s.bold) td.style.fontWeight = "700";
 }
 
+const LAST_SHEET_KEY = "label-printer.lastsheet";
+const LAST_SHEET_MAX = 50;
+
+/** 記憶用的來源識別：檔案用路徑；連線字串與伺服器來源拿掉密碼，只留能辨認是哪一個的部分 */
+export function sourceKey(p: string): string {
+  if (p.startsWith("net:")) {
+    try {
+      const o = JSON.parse(p.slice(4)) as Record<string, unknown>;
+      return `net:${o.kind}|${o.host}|${o.port ?? ""}|${o.database ?? ""}`;
+    } catch { return "net:"; }
+  }
+  if (p.startsWith("odbc:")) return p.replace(/(^|;)\s*(pwd|password)\s*=[^;]*/gi, "$1");
+  return p;
+}
+
+function readLast(): [string, string][] {
+  try {
+    const v = JSON.parse(localStorage.getItem(LAST_SHEET_KEY) ?? "[]");
+    return Array.isArray(v) ? v.filter((e) => Array.isArray(e) && typeof e[0] === "string" && typeof e[1] === "string") : [];
+  } catch { return []; }
+}
+
+/** 上次在這個來源選的工作表／資料表（沒有記錄回傳 undefined） */
+export function recallSheet(p: string): string | undefined {
+  const k = sourceKey(p);
+  return readLast().find((e) => e[0] === k)?.[1];
+}
+
+/** 記下這個來源目前選的工作表／資料表；只有多個選項才有意義（自訂查詢由連線對話框自己記） */
+export function rememberSheet(p: string, sheet: string, sheets: string[]): void {
+  if (sheets.length <= 1 || sheet.startsWith("sql:")) return;
+  const k = sourceKey(p);
+  const list = readLast().filter((e) => e[0] !== k);
+  list.push([k, sheet]);
+  try { localStorage.setItem(LAST_SHEET_KEY, JSON.stringify(list.slice(-LAST_SHEET_MAX))); } catch { /* 無法儲存就算了 */ }
+}
+
 async function load(sheet?: string): Promise<void> {
-  const t = await invoke<TableData>("read_table", { path, sheet: sheet ?? null });
+  let t: TableData | undefined;
+  const last = sheet === undefined ? recallSheet(path) : undefined;
+  if (last !== undefined) {
+    try { t = await invoke<TableData>("read_table", { path, sheet: last }); } catch { t = undefined; } // 記的名稱不在了就用預設的
+  }
+  t ??= await invoke<TableData>("read_table", { path, sheet: sheet ?? null });
+  rememberSheet(path, t.sheet, t.sheets);
   data = t;
   checked.clear();
   picked.clear();
@@ -161,25 +204,45 @@ async function loadDbPage(offset: number): Promise<void> {
   document.querySelector(".data-scroll")?.scrollTo({ top: 0 });
 }
 
-/** 上一頁（-1）／下一頁（+1） */
-async function turnPage(delta: number): Promise<void> {
-  if (!data) return;
+/** 目前是第幾頁（1 起算） */
+function currentPage(): number {
+  if (!data) return 1;
+  return Math.floor((isDb() ? data.page!.offset : pageStart) / PAGE_SIZE) + 1;
+}
+
+/** 總頁數；資料庫沒有總列數（Access／ODBC）時未知，回傳 null */
+function pageCount(): number | null {
+  if (!data) return null;
+  if (isDb()) return dbTotal != null ? Math.max(1, Math.ceil(dbTotal / PAGE_SIZE)) : null;
+  return Math.max(1, Math.ceil(data.rows.length / PAGE_SIZE));
+}
+
+/** 跳到第 no 頁（1 起算）；超出範圍時夾在第一頁～最後一頁之間 */
+async function gotoPage(no: number): Promise<void> {
+  if (!data || !Number.isFinite(no)) return;
+  const n = pageCount();
+  const target = Math.max(1, n == null ? Math.floor(no) : Math.min(n, Math.floor(no)));
+  if (target === currentPage()) {
+    updatePager(); // 輸入框要還原成目前頁碼
+    return;
+  }
   try {
     if (isDb()) {
-      const off = Math.max(0, data.page!.offset + delta * PAGE_SIZE);
-      if (off !== data.page!.offset) await loadDbPage(off);
+      await loadDbPage((target - 1) * PAGE_SIZE);
     } else {
-      const next = Math.max(0, Math.min(Math.floor((data.rows.length - 1) / PAGE_SIZE) * PAGE_SIZE, pageStart + delta * PAGE_SIZE));
-      if (next === pageStart) return;
-      pageStart = next;
+      pageStart = (target - 1) * PAGE_SIZE;
       active = -1;
       render();
       document.querySelector(".data-scroll")?.scrollTo({ top: 0 });
     }
   } catch (e) {
     h.onStatus(String(e), "err");
+    updatePager();
   }
 }
+
+/** 上一頁（-1）／下一頁（+1） */
+const turnPage = (delta: number): Promise<void> => gotoPage(currentPage() + delta);
 
 /** 以指定的來源載入（資料庫連線對話框使用）：path 可以是資料庫檔案，或 `odbc:` 開頭的連線字串；sheet 可以是資料表名或 `sql:` 查詢 */
 export async function loadSource(p: string, sheet?: string, label = ""): Promise<void> {
@@ -258,6 +321,14 @@ function updatePager(): void {
   $("data-page").textContent = label;
   $<HTMLButtonElement>("data-prev").disabled = !prev;
   $<HTMLButtonElement>("data-next").disabled = !next;
+  // 第一頁／最後一頁／跳頁：最後一頁與跳頁需要知道總頁數（Access／ODBC 沒有總列數，只能一頁一頁往後）
+  const pages = pageCount();
+  $<HTMLButtonElement>("data-first").disabled = !prev;
+  $<HTMLButtonElement>("data-last").disabled = !next || pages == null;
+  const go = $<HTMLInputElement>("data-goto");
+  go.disabled = pages == null;
+  go.max = pages == null ? "" : String(pages);
+  go.value = "";
   // 資料庫的全選／全不選／反選只作用在目前這一頁，滑過去時提醒
   const hint = isDb() ? t("資料庫的資料是一頁一頁讀的，這裡只作用在目前這一頁") : "";
   for (const id of ["data-all", "data-none", "data-invert"]) {
@@ -439,6 +510,17 @@ export function initTable(handlers: TableHandlers): void {
   $("data-preview").addEventListener("click", () => h.onPrintPreview?.());
   $("data-prev").addEventListener("click", () => void turnPage(-1));
   $("data-next").addEventListener("click", () => void turnPage(1));
+  $("data-first").addEventListener("click", () => void gotoPage(1));
+  $("data-last").addEventListener("click", () => { const n = pageCount(); if (n != null) void gotoPage(n); });
+  const goto = $<HTMLInputElement>("data-goto");
+  goto.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const v = goto.valueAsNumber;
+    if (Number.isFinite(v)) void gotoPage(v);
+    else updatePager();
+  });
+  goto.addEventListener("blur", () => { goto.value = ""; }); // 沒按 Enter 就離開：不跳頁，清掉輸入
   $("data-print").addEventListener("click", async () => {
     const sel = selectedRows();
     if (!sel) return;

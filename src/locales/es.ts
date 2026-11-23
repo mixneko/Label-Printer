@@ -551,6 +551,22 @@ export const es: Table = {
   "縮小": "Reducir",
   "實際大小 (100%)": "Tamaño real (100%)",
   "畫布可以放大縮小：Ctrl＋滾輪、右下角的縮放按鈕、「檢視」選單或 Ctrl＋加號／減號（Ctrl＋0 符合視窗、Ctrl＋1 實際大小）": "El lienzo ahora se puede ampliar y reducir: Ctrl + rueda del ratón, los botones de zoom de la esquina inferior derecha, el menú Ver o Ctrl más/menos (Ctrl+0 ajusta a la ventana, Ctrl+1 muestra el tamaño real)",
+  // v1.0.1 安全強化
+  "標籤檔含有外部的圖片網址，為了安全已拒絕開啟": "El archivo de etiqueta contiene una URL de imagen externa y no se abrió, por su seguridad",
+  "檔案超過 256 MB，為避免程式當掉已拒絕開啟": "El archivo supera los 256 MB y no se abrió para evitar que el programa se bloquee",
+  "壓縮包內的檔案過多，為避免程式當掉已拒絕開啟": "El archivo comprimido contiene demasiados archivos y no se abrió para evitar que el programa se bloquee",
+  "檔案展開後超過 300 MB，為避免程式當掉已拒絕開啟": "El archivo ocupa más de 300 MB al descomprimirse y no se abrió para evitar que el programa se bloquee",
+  "工作表「{name}」的範圍過大（約 {area} 格），為避免程式當掉已拒絕開啟": "El rango de la hoja {name} es demasiado grande (unas {area} celdas) y no se abrió para evitar que el programa se bloquee",
+  "不允許存取這種檔案": "No se permite el acceso a este tipo de archivo",
+  "標籤檔過大，已拒絕開啟": "El archivo de etiqueta es demasiado grande y no se abrió",
+  "強化安全性：開啟惡意構造或過大的 Excel／CSV 檔不再讓程式當掉，會直接拒絕並說明原因": "Seguridad reforzada: abrir un archivo Excel/CSV malicioso o demasiado grande ya no bloquea el programa; se rechaza con una explicación",
+  "強化安全性：標籤檔裡的外部圖片網址會被拒絕（避免開啟檔案時偷偷對外連線）；紙張與標籤尺寸限制在 1～1000 mm、間隙最多 100 mm": "Seguridad reforzada: se rechazan las URL de imágenes externas en los archivos de etiqueta (abrir un archivo no puede conectarse en secreto a internet); el tamaño del papel y de la etiqueta se limita a 1–1000 mm y la separación a 100 mm",
+  "強化安全性：啟用內容安全政策（CSP），並限制程式只能讀寫標籤檔（.lpxl／.json）與匯出的 PDF；自動發布流程使用的工具也改為固定版本": "Seguridad reforzada: se activa una política de seguridad de contenido (CSP) y el programa solo puede leer y escribir archivos de etiqueta (.lpxl/.json) y PDF exportados; las herramientas del proceso de publicación automática ahora usan versiones fijas",
+  // v1.0.1 資料分頁
+  "第 {p} / {n} 頁（共 {total} 列）": "Página {p} / {n} ({total} filas)",
+  "第 {p} 頁": "Página {p}",
+  "資料庫的資料是一頁一頁讀的，這裡只作用在目前這一頁": "Los datos de la base de datos se leen página por página; esto solo afecta a la página actual",
+  "資料庫改為分頁讀取：每頁最多 1,000 列，幾萬筆的資料表也不會讓程式卡住；勾選的列換頁後仍會保留（Excel／CSV 列數很多時同樣分頁顯示）": "Las bases de datos ahora se leen página por página: como máximo 1.000 filas por página, así que las tablas con decenas de miles de filas ya no bloquean el programa; las filas marcadas se conservan al cambiar de página (los archivos Excel/CSV largos también se paginan)",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Impresión en hojas de pegatinas / A4…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "Las celdas sobrepasan el papel. Reduzca las columnas o filas, o reduzca los márgenes y separaciones.",

@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Label Printer</title>
-    <script>
-      // 先套用使用者選的外觀，避免開啟時閃一下（theme.ts 之後接手按鈕與儲存）
-      try { var t = localStorage.getItem("label-printer.theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <!-- ICONS:BEGIN -->
@@ -302,6 +299,11 @@
       </div>
       <div id="data-chips" class="chips" data-hint="點欄位可插入到選取的物件："></div>
       <div class="data-scroll"><table id="data-table"></table></div>
+      <div id="data-pager" class="data-pager" hidden>
+        <button id="data-prev" type="button" class="btn sm">上一頁</button>
+        <span id="data-page" class="page-label"></span>
+        <button id="data-next" type="button" class="btn sm">下一頁</button>
+      </div>
     </section>
 
     <!-- 物件「屬性」對話框（右鍵 → 屬性…，或 Alt+Enter） -->

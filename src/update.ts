@@ -153,6 +153,12 @@ document.getElementById("update-close")!.addEventListener("click", () => dlg("up
 // ---------- 新功能 ----------
 /** 由新到舊。每個版本一組說明；文字用 N 標記進翻譯表，顯示時才 t()。 */
 const NOTES: Array<{ version: string; items: string[] }> = [
+  { version: "1.0.1", items: [
+    N("強化安全性：開啟惡意構造或過大的 Excel／CSV 檔不再讓程式當掉，會直接拒絕並說明原因"),
+    N("強化安全性：標籤檔裡的外部圖片網址會被拒絕（避免開啟檔案時偷偷對外連線）；紙張與標籤尺寸限制在 1～1000 mm、間隙最多 100 mm"),
+    N("強化安全性：啟用內容安全政策（CSP），並限制程式只能讀寫標籤檔（.lpxl／.json）與匯出的 PDF；自動發布流程使用的工具也改為固定版本"),
+    N("資料庫改為分頁讀取：每頁最多 1,000 列，幾萬筆的資料表也不會讓程式卡住；勾選的列換頁後仍會保留（Excel／CSV 列數很多時同樣分頁顯示）"),
+  ] },
   { version: "1.0.0", items: [
     N("新增多種標籤機語言：除了 TSPL，也支援 ZPL、EPL2、CPCL、DPL、SBPL；從 Windows 選印表機時會依驅動程式自動偵測語言，直連 TCP 則自己選擇（TSPL 以外為實驗性質，尚未在實機驗證）"),
     N("ZPL、EPL2、CPCL、DPL、SBPL 也能使用印表機原生指令列印條碼與 QR Code（在物件屬性勾選，會標示「實驗中」，尚未在實機驗證，歡迎回報結果）；EPL2 與 SBPL 沒有 QR 指令，仍用點陣"),

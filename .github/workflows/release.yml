@@ -18,16 +18,19 @@ jobs:
     if: github.server_url == 'https://github.com'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      # 第三方 Action 一律用 commit SHA 固定（供應鏈安全：標籤可以被移動，SHA 不行）；升級時換 SHA 並更新註解的版本
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: npm
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          toolchain: stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: src-tauri
 
@@ -89,7 +92,7 @@ jobs:
           node scripts/make-latest-json.mjs "$VER" "v$VER" trial-notes.txt dist-release
           ls -l dist-release
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: label-printer-${{ steps.ver.outputs.version }}
           path: dist-release/*

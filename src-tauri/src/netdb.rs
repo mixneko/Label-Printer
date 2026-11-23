@@ -10,13 +10,13 @@
 //! - 一律**唯讀**：自訂查詢只收單一 SELECT／WITH；連線後再要求資料庫把交易設成唯讀（MySQL、PostgreSQL）。
 //!   SQL Server 沒有這種連線設定，所以請使用者用只有讀取權限的帳號。
 //! - 預設**加密並驗證伺服器憑證**；使用者可以明確改成「信任自簽憑證」或「不加密」（只該用在可信任的內部網路）。
-//! - 連線逾時 8 秒、查詢逾時 60 秒，最多讀 100,000 列、單一文字欄位最多 4,096 字元。
+//! - 連線逾時 8 秒、查詢逾時 60 秒，一次只讀一頁（最多 1,000 列，由伺服器分頁，不會把整張表載入）、單一文字欄位最多 4,096 字元。
 //! - 密碼只存在記憶體，不寫入任何檔案、不出現在錯誤訊息或畫面上的來源名稱。
 //!
 //! 來源字串（前端傳來的 `path`）：`net:` 後面接 JSON：
 //! `{"kind":"mssql|mysql|postgres","host":"…","port":1433,"database":"…","user":"…","password":"…","winauth":false,"security":"verify|trust|off"}`
 
-use crate::dbsource::{check_select, finish, listing, parse_datetime, pick, show_number, trim_decimal, Cell, MAX_ROWS, MAX_TEXT};
+use crate::dbsource::{check_select, finish, listing, parse_datetime, pick, show_number, trim_decimal, Cell, Page, Slicer, Take, MAX_TEXT};
 use crate::sheet::Grid;
 use serde::Deserialize;
 use std::time::Duration;
@@ -70,12 +70,12 @@ pub fn is_net_source(path: &str) -> bool {
     path.starts_with("net:")
 }
 
-pub(crate) fn read(path: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid), String> {
+pub(crate) fn read(path: &str, sheet: Option<&str>, page: Page) -> Result<(Vec<String>, String, Grid), String> {
     let c = parse(path.strip_prefix("net:").unwrap_or(path))?;
     match c.kind.as_str() {
-        "mssql" => read_mssql(&c, sheet),
-        "mysql" => read_mysql(&c, sheet),
-        _ => read_postgres(&c, sheet),
+        "mssql" => read_mssql(&c, sheet, page),
+        "mysql" => read_mysql(&c, sheet, page),
+        _ => read_postgres(&c, sheet, page),
     }
 }
 
@@ -213,7 +213,7 @@ fn mssql_datetime2(dt: &tiberius::time::DateTime2) -> Cell {
     Cell::Date([y, m, day, secs / 3600, secs / 60 % 60, secs % 60, ms])
 }
 
-fn read_mssql(c: &Conn, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid), String> {
+fn read_mssql(c: &Conn, sheet: Option<&str>, page: Page) -> Result<(Vec<String>, String, Grid), String> {
     use futures_util::TryStreamExt;
     use tiberius::{AuthMethod, Client, Config, EncryptionLevel};
     use tokio::net::TcpStream;
@@ -265,9 +265,20 @@ fn read_mssql(c: &Conn, sheet: Option<&str>) -> Result<(Vec<String>, String, Gri
             })
             .collect();
         let (chosen, src) = choose(sheet, &tables)?;
-        let sql = match src {
-            Source::Table(ident) => format!("SELECT TOP {} * FROM {ident}", MAX_ROWS + 1),
-            Source::Sql(q) => q,
+        // 資料表：由伺服器分頁（OFFSET/FETCH 要求有 ORDER BY，用 (SELECT NULL) 表示不指定順序），多取一列判斷有沒有下一頁。
+        // 自訂查詢不能包成子查詢（可能有 ORDER BY 或 WITH），所以照原樣執行，在這裡略過前面的列、取滿一頁就停止讀取。
+        let mut total: Option<u64> = None;
+        let (sql, skip_here) = match src {
+            Source::Table(ident) => {
+                if page.offset == 0 {
+                    total = match client.simple_query(format!("SELECT COUNT_BIG(*) FROM {ident}")).await {
+                        Ok(s) => s.into_row().await.ok().flatten().and_then(|r| r.get::<i64, _>(0)).map(|n| n.max(0) as u64),
+                        Err(_) => None,
+                    };
+                }
+                (format!("SELECT * FROM {ident} ORDER BY (SELECT NULL) OFFSET {} ROWS FETCH NEXT {} ROWS ONLY", page.offset, page.limit + 1), false)
+            }
+            Source::Sql(q) => (q, true),
         };
         let mut stream = client.simple_query(sql).await.map_err(|e| format!("查詢失敗：{e}"))?;
         let headers: Vec<String> = stream
@@ -277,14 +288,18 @@ fn read_mssql(c: &Conn, sheet: Option<&str>) -> Result<(Vec<String>, String, Gri
             .map(|cols| cols.iter().map(|c| c.name().to_string()).collect())
             .unwrap_or_default();
         let mut out: Vec<Vec<Cell>> = Vec::new();
+        // 伺服器已分好頁的查詢，位移已經是 0
+        let mut slice = Slicer::new(if skip_here { page } else { Page { offset: 0, ..page } });
         let mut rows = stream.into_row_stream();
         while let Some(row) = rows.try_next().await.map_err(|e| format!("讀取資料失敗：{e}"))? {
-            if out.len() >= MAX_ROWS {
-                return Err(format!("資料超過 {MAX_ROWS} 列，請改用 SQL 查詢縮小範圍"));
+            match slice.next() {
+                Take::Skip => continue,
+                Take::Stop => break,
+                Take::Keep => {}
             }
             out.push(row.into_iter().map(|d| mssql_cell(&d)).collect());
         }
-        Ok((listing(&tables.iter().map(|t| t.display.clone()).collect::<Vec<_>>(), &chosen), chosen, finish(headers, out)))
+        Ok((listing(&tables.iter().map(|t| t.display.clone()).collect::<Vec<_>>(), &chosen), chosen, finish(headers, out, page, total, slice.more)))
     })
 }
 
@@ -294,7 +309,7 @@ fn mysql_quote(name: &str) -> String {
     format!("`{}`", name.replace('`', "``"))
 }
 
-fn read_mysql(c: &Conn, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid), String> {
+fn read_mysql(c: &Conn, sheet: Option<&str>, page: Page) -> Result<(Vec<String>, String, Grid), String> {
     use mysql::consts::{ColumnFlags, ColumnType as T};
     use mysql::prelude::Queryable;
     use mysql::{Conn as MyConn, OptsBuilder, SslOpts, Value};
@@ -322,18 +337,22 @@ fn read_mysql(c: &Conn, sheet: Option<&str>) -> Result<(Vec<String>, String, Gri
         .map_err(|e| format!("查詢失敗：{e}"))?;
     let tables: Vec<Table> = names.into_iter().map(|n| Table { ident: mysql_quote(&n), display: n }).collect();
     let (chosen, src) = choose(sheet, &tables)?;
-    let sql = match src {
-        Source::Table(ident) => format!("SELECT * FROM {ident} LIMIT {}", MAX_ROWS + 1),
-        Source::Sql(q) => format!("SELECT * FROM ({q}) AS _q LIMIT {}", MAX_ROWS + 1),
+    // 由伺服器分頁，多取一列判斷有沒有下一頁；總列數只在第一頁時算
+    let base = match &src {
+        Source::Table(ident) => ident.clone(),
+        Source::Sql(q) => format!("({q}) AS _q"),
     };
+    let total: Option<u64> = if page.offset == 0 { conn.query_first::<u64, _>(format!("SELECT COUNT(*) FROM {base}")).ok().flatten() } else { None };
+    let sql = format!("SELECT * FROM {base} LIMIT {} OFFSET {}", page.limit + 1, page.offset);
     let mut rs = conn.query_iter(sql).map_err(|e| format!("查詢失敗：{e}"))?;
     let cols: Vec<(String, T, ColumnFlags)> = rs.columns().as_ref().iter().map(|c| (c.name_str().to_string(), c.column_type(), c.flags())).collect();
     let headers: Vec<String> = cols.iter().map(|c| c.0.clone()).collect();
     let mut out: Vec<Vec<Cell>> = Vec::new();
+    let mut slice = Slicer::new(Page { offset: 0, ..page });
     for row in rs.by_ref() {
         let row = row.map_err(|e| format!("讀取資料失敗：{e}"))?;
-        if out.len() >= MAX_ROWS {
-            return Err(format!("資料超過 {MAX_ROWS} 列，請改用 SQL 查詢縮小範圍"));
+        if let Take::Stop = slice.next() {
+            break;
         }
         // 文字通訊協定：所有值都是文字（Bytes），依欄位型別再解讀
         let cells = row
@@ -367,7 +386,7 @@ fn read_mysql(c: &Conn, sheet: Option<&str>) -> Result<(Vec<String>, String, Gri
         out.push(cells);
     }
     drop(rs);
-    Ok((listing(&tables.iter().map(|t| t.display.clone()).collect::<Vec<_>>(), &chosen), chosen, finish(headers, out)))
+    Ok((listing(&tables.iter().map(|t| t.display.clone()).collect::<Vec<_>>(), &chosen), chosen, finish(headers, out, page, total, slice.more)))
 }
 
 // ---------- PostgreSQL ----------
@@ -376,7 +395,7 @@ fn pg_quote(name: &str) -> String {
     format!("\"{}\"", name.replace('"', "\"\""))
 }
 
-fn read_postgres(c: &Conn, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid), String> {
+fn read_postgres(c: &Conn, sheet: Option<&str>, page: Page) -> Result<(Vec<String>, String, Grid), String> {
     use postgres::types::Type;
     use postgres::config::SslMode;
     use postgres::{Config, NoTls, SimpleQueryMessage};
@@ -415,20 +434,27 @@ fn read_postgres(c: &Conn, sheet: Option<&str>) -> Result<(Vec<String>, String, 
         }
     }
     let (chosen, src) = choose(sheet, &tables)?;
-    let sql = match src {
-        Source::Table(ident) => format!("SELECT * FROM {ident} LIMIT {}", MAX_ROWS + 1),
-        Source::Sql(q) => format!("SELECT * FROM ({q}) AS _q LIMIT {}", MAX_ROWS + 1),
+    let base = match &src {
+        Source::Table(ident) => ident.clone(),
+        Source::Sql(q) => format!("({q}) AS _q"),
     };
+    let total: Option<u64> = if page.offset == 0 {
+        client.query_one(&format!("SELECT COUNT(*) FROM {base}"), &[]).ok().and_then(|r| r.try_get::<_, i64>(0).ok()).map(|n| n.max(0) as u64)
+    } else {
+        None
+    };
+    let sql = format!("SELECT * FROM {base} LIMIT {} OFFSET {}", page.limit + 1, page.offset);
     // 先 prepare 取得欄位型別（簡單查詢只回文字，不帶型別），再用簡單查詢讀資料（全部是文字，由型別決定怎麼解讀）
     let stmt = client.prepare(&sql).map_err(|e| format!("查詢失敗：{e}"))?;
     let cols: Vec<(String, Type)> = stmt.columns().iter().map(|c| (c.name().to_string(), c.type_().clone())).collect();
     let headers: Vec<String> = cols.iter().map(|c| c.0.clone()).collect();
     let msgs = client.simple_query(&sql).map_err(|e| format!("讀取資料失敗：{e}"))?;
     let mut out: Vec<Vec<Cell>> = Vec::new();
+    let mut slice = Slicer::new(Page { offset: 0, ..page });
     for m in msgs {
         let SimpleQueryMessage::Row(r) = m else { continue };
-        if out.len() >= MAX_ROWS {
-            return Err(format!("資料超過 {MAX_ROWS} 列，請改用 SQL 查詢縮小範圍"));
+        if let Take::Stop = slice.next() {
+            break;
         }
         out.push(
             cols.iter()
@@ -440,7 +466,7 @@ fn read_postgres(c: &Conn, sheet: Option<&str>) -> Result<(Vec<String>, String, 
                 .collect(),
         );
     }
-    Ok((listing(&tables.iter().map(|t| t.display.clone()).collect::<Vec<_>>(), &chosen), chosen, finish(headers, out)))
+    Ok((listing(&tables.iter().map(|t| t.display.clone()).collect::<Vec<_>>(), &chosen), chosen, finish(headers, out, page, total, slice.more)))
 }
 
 fn pg_cell(s: &str, ty: &postgres::types::Type) -> Cell {
@@ -567,7 +593,7 @@ mod tests {
             for security in ["verify", "off"] {
                 let t = std::time::Instant::now();
                 let spec = format!(r#"{{"kind":"{kind}","host":"127.0.0.1","port":1,"database":"d","user":"u","password":"p","security":"{security}"}}"#);
-                let msg = read(&format!("net:{spec}"), None).err().expect("應該連線失敗");
+                let msg = read(&format!("net:{spec}"), None, Page::default()).err().expect("應該連線失敗");
                 println!("{kind}/{security}: {:?} → {msg}", t.elapsed());
                 assert!(msg.len() > 8 && !msg.contains("\"p\""), "{msg}");
                 assert!(t.elapsed() < Duration::from_secs(20));
@@ -582,7 +608,7 @@ mod tests {
 
     fn live(kind: &str, port: u16, user: &str, pass: &str, security: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid), String> {
         let spec = format!(r#"{{"kind":"{kind}","host":"127.0.0.1","port":{port},"database":"shop","user":"{user}","password":"{pass}","security":"{security}"}}"#);
-        read(&format!("net:{spec}"), sheet)
+        read(&format!("net:{spec}"), sheet, Page::default())
     }
 
     fn raw_num(g: &Grid, r: usize, c: usize) -> Option<f64> {
@@ -643,6 +669,42 @@ mod tests {
         let e = live("mysql", 33061, "ro", "wrong", "off", None).err().expect("密碼錯誤要失敗");
         println!("密碼錯誤：{e}");
         assert!(!e.contains("wrong"), "錯誤訊息不能含密碼：{e}");
+    }
+
+    /// 真實伺服器的分頁：需要先在 shop 資料庫建一張 pgbig（n 1..2500、name），見上面的說明；測完請刪掉這張表，
+    /// 不然 live_mariadb／live_postgres 對資料表清單的預期會多一項。
+    fn page_of(kind: &str, port: u16, user: &str, pass: &str, sheet: &str, offset: u64) -> crate::sheet::TableData {
+        let spec = format!(r#"net:{{"kind":"{kind}","host":"127.0.0.1","port":{port},"database":"shop","user":"{user}","password":"{pass}","security":"off"}}"#);
+        crate::sheet::read_table_page(&spec, Some(sheet), Some(offset), None).unwrap()
+    }
+
+    fn check_paging(kind: &str, port: u16, user: &str, pass: &str) {
+        let p0 = page_of(kind, port, user, pass, "pgbig", 0);
+        let i0 = p0.page.clone().unwrap();
+        assert_eq!(p0.rows.len(), 1000, "{kind} 第 1 頁");
+        assert_eq!((i0.offset, i0.total, i0.more), (0, Some(2500), true), "{kind}");
+        let p1 = page_of(kind, port, user, pass, "pgbig", 1000);
+        assert_eq!((p1.rows.len(), p1.rows[0][0].as_str(), p1.row_numbers[0]), (1000, "1001", 1001), "{kind} 第 2 頁");
+        assert_eq!(p1.page.as_ref().unwrap().total, None, "{kind} 之後的頁不重算總數");
+        let p2 = page_of(kind, port, user, pass, "pgbig", 2000);
+        assert_eq!((p2.rows.len(), p2.rows.last().unwrap()[0].as_str(), p2.page.unwrap().more), (500, "2500", false), "{kind} 最後一頁");
+        // 自訂查詢也由伺服器分頁（偶數共 1250 列）
+        let q = page_of(kind, port, user, pass, "sql:SELECT n, name FROM pgbig WHERE n % 2 = 0 ORDER BY n", 1000);
+        assert_eq!((q.rows.len(), q.rows[0][0].as_str(), q.page.unwrap().more), (250, "2002", false), "{kind} 自訂查詢");
+        let q0 = page_of(kind, port, user, pass, "sql:SELECT n, name FROM pgbig WHERE n % 2 = 0 ORDER BY n", 0);
+        assert_eq!(q0.page.unwrap().total, Some(1250), "{kind} 自訂查詢的總數");
+    }
+
+    #[test]
+    #[ignore]
+    fn live_paging_mariadb() {
+        check_paging("mysql", 33061, "ro", "ropw");
+    }
+
+    #[test]
+    #[ignore]
+    fn live_paging_postgres() {
+        check_paging("postgres", 54329, "ro", "x");
     }
 
     #[test]

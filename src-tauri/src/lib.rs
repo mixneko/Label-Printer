@@ -1,5 +1,6 @@
 mod dbsource;
 mod fonts;
+mod guard;
 mod langs;
 mod netdb;
 mod numfmt;
@@ -56,8 +57,9 @@ async fn list_fonts() -> Result<Vec<String>, String> {
 
 /// 讀取使用者在對話框中選定的 Excel / CSV 檔，回傳欄位標題與資料列。
 #[tauri::command]
-async fn read_table(path: String, sheet: Option<String>) -> Result<sheet::TableData, String> {
-    tauri::async_runtime::spawn_blocking(move || sheet::read_table(&path, sheet.as_deref()))
+async fn read_table(path: String, sheet: Option<String>, offset: Option<u64>, limit: Option<u64>) -> Result<sheet::TableData, String> {
+    // offset／limit 只對資料庫有意義（一頁一頁讀，每頁最多 1000 列）；檔案類來源忽略
+    tauri::async_runtime::spawn_blocking(move || sheet::read_table_page(&path, sheet.as_deref(), offset, limit))
         .await
         .map_err(|e| e.to_string())?
 }
@@ -143,15 +145,40 @@ fn path_exists(path: String) -> bool {
     std::path::Path::new(&path).is_file()
 }
 
+/// 讀寫檔案的命令只服務「標籤檔」與「匯出的 PDF」。就算網頁部分被攻擊者控制，也不能拿這些命令去
+/// 讀任意檔案、或覆蓋腳本／執行檔／開機啟動捷徑（只放行固定的副檔名，且必須是完整路徑）。
+const LABEL_EXTS: &[&str] = &["lpxl", "json"];
+const MAX_LABEL_BYTES: u64 = 64 * 1024 * 1024;
+
+fn check_file_kind(path: &str, exts: &[&str]) -> Result<(), String> {
+    let p = std::path::Path::new(path);
+    let ext_ok = p
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| exts.iter().any(|x| x.eq_ignore_ascii_case(e)));
+    // 路徑要是完整路徑（檔案對話框回傳的都是），且不含 `..`
+    let plain = p.is_absolute() && !p.components().any(|c| matches!(c, std::path::Component::ParentDir));
+    if ext_ok && plain {
+        Ok(())
+    } else {
+        Err("不允許存取這種檔案".into())
+    }
+}
+
 /// 讀取使用者在對話框中選定的文字檔（範本 JSON）。
 #[tauri::command]
 fn read_text_file(path: String) -> Result<String, String> {
+    check_file_kind(&path, LABEL_EXTS)?;
+    if std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0) > MAX_LABEL_BYTES {
+        return Err("標籤檔過大，已拒絕開啟".into());
+    }
     std::fs::read_to_string(&path).map_err(|e| format!("讀取檔案失敗：{e}"))
 }
 
 /// 寫入使用者在對話框中選定的文字檔（範本 JSON）。
 #[tauri::command]
 fn write_text_file(path: String, content: String) -> Result<(), String> {
+    check_file_kind(&path, LABEL_EXTS)?;
     std::fs::write(&path, content).map_err(|e| format!("寫入檔案失敗：{e}"))
 }
 
@@ -159,6 +186,7 @@ fn write_text_file(path: String, content: String) -> Result<(), String> {
 #[tauri::command]
 fn write_binary_file(path: String, data: String) -> Result<(), String> {
     use base64::Engine;
+    check_file_kind(&path, &["pdf"])?;
     let bytes = base64::engine::general_purpose::STANDARD.decode(data).map_err(|e| format!("資料格式錯誤：{e}"))?;
     std::fs::write(&path, bytes).map_err(|e| format!("寫入檔案失敗：{e}"))
 }
@@ -190,7 +218,19 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{pick_startup_file, url_allowed};
+    use super::{check_file_kind, pick_startup_file, url_allowed, LABEL_EXTS};
+
+    #[test]
+    fn file_commands_only_allow_label_and_pdf_files() {
+        assert!(check_file_kind("C:\\Users\\a\\label.lpxl", LABEL_EXTS).is_ok());
+        assert!(check_file_kind("C:\\Users\\a\\OLD.JSON", LABEL_EXTS).is_ok());
+        assert!(check_file_kind("C:\\Users\\a\\x.pdf", &["pdf"]).is_ok());
+        // 其他檔案、腳本、執行檔、相對路徑、上層目錄、沒有副檔名都不行
+        for bad in ["C:\\Windows\\win.ini", "C:\\Users\\a\\Startup\\a.bat", "C:\\x\\run.exe", "C:\\x\\evil.lpxl.lnk", "label.lpxl", "C:\\x\\..\\y\\a.lpxl", "C:\\x\\noext"] {
+            assert!(check_file_kind(bad, LABEL_EXTS).is_err(), "{bad}");
+        }
+        assert!(check_file_kind("C:\\x\\a.lpxl", &["pdf"]).is_err());
+    }
 
     #[test]
     fn open_url_only_allows_the_project_repo() {

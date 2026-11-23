@@ -63,6 +63,20 @@ pub struct TableData {
     /// 來源種類：資料庫為 "db"（介面把「工作表」改稱「資料表」）；檔案類來源沒有這個欄位
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<&'static str>,
+    /// 資料庫是一頁一頁讀的：這是目前這一頁的資訊（位移、每頁筆數、總列數、有沒有下一頁）；檔案類來源沒有這個欄位
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page: Option<PageInfo>,
+}
+
+/// 資料庫分頁資訊。`total` 只有第一頁（位移 0）才會算；其他頁與算不出來時為 None，前端沿用第一頁的總數。
+#[derive(Debug, Serialize, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PageInfo {
+    pub offset: u64,
+    pub limit: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total: Option<u64>,
+    pub more: bool,
 }
 
 /// 讀進來的原始格子。`styles`、`raw` 要嘛為空，要嘛與 `rows` 同樣大小。
@@ -74,12 +88,20 @@ pub(crate) struct Grid {
     pub first_row: u32,
     /// 是否保留資料列之間的空白列（Excel 為 true；CSV 等為 false）
     pub keep_blank: bool,
+    /// 資料庫的分頁資訊（檔案類來源為 None）
+    pub page: Option<PageInfo>,
 }
 
+#[cfg_attr(not(test), allow(dead_code))] // 正式程式走 read_table_page；這個簡短版本給測試用
 pub fn read_table(path: &str, sheet: Option<&str>) -> Result<TableData, String> {
+    read_table_page(path, sheet, None, None)
+}
+
+/// 同 `read_table`；資料庫來源可指定從第幾列起（`offset`）讀多少列（`limit`，最多 1000），只回傳那一頁。檔案類來源忽略這兩個參數。
+pub fn read_table_page(path: &str, sheet: Option<&str>, offset: Option<u64>, limit: Option<u64>) -> Result<TableData, String> {
     // 資料庫（SQLite、Access、ODBC）另外處理，結果同樣整理成「欄位標題 + 資料列」
     if crate::dbsource::is_db_source(path) {
-        let (sheets, name, grid) = crate::dbsource::read(path, sheet)?;
+        let (sheets, name, grid) = crate::dbsource::read(path, sheet, crate::dbsource::Page::new(offset, limit))?;
         let mut t = build_table(sheets, name, grid)?;
         t.kind = Some("db");
         return Ok(t);
@@ -91,9 +113,10 @@ pub fn read_table(path: &str, sheet: Option<&str>) -> Result<TableData, String> 
         .to_lowercase();
 
     let (sheets, name, grid) = if matches!(ext.as_str(), "csv" | "txt" | "tsv") {
+        crate::guard::check_size(Path::new(path))?;
         let bytes = std::fs::read(path).map_err(|e| format!("讀取檔案失敗：{e}"))?;
         let rows = parse_csv(&decode_text(&bytes))?;
-        let grid = Grid { rows, styles: vec![], raw: vec![], first_row: 1, keep_blank: false };
+        let grid = Grid { rows, styles: vec![], raw: vec![], first_row: 1, keep_blank: false, page: None };
         (vec!["CSV".to_string()], "CSV".to_string(), grid)
     } else {
         read_workbook(path, sheet)?
@@ -102,6 +125,8 @@ pub fn read_table(path: &str, sheet: Option<&str>) -> Result<TableData, String> 
 }
 
 fn read_workbook(path: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid), String> {
+    // 先擋掉會讓函式庫配置過量記憶體（甚至直接中止程式）的惡意檔案
+    crate::guard::check_workbook(Path::new(path))?;
     let mut wb = open_workbook_auto(path).map_err(|e| format!("無法開啟活頁簿：{e}"))?;
     let sheets: Vec<String> = wb.sheet_names().to_vec();
     let name = sheet
@@ -135,7 +160,7 @@ fn read_workbook(path: &str, sheet: Option<&str>) -> Result<(Vec<String>, String
         styles.push(cell_styles.iter().map(|st| st.and_then(to_cell_style)).collect());
         raws.push(row.iter().map(to_raw).collect());
     }
-    Ok((sheets, name, Grid { rows, styles, raw: raws, first_row: r0 + 1, keep_blank: true }))
+    Ok((sheets, name, Grid { rows, styles, raw: raws, first_row: r0 + 1, keep_blank: true, page: None }))
 }
 
 /// 數字與日期時間儲存格的原始值（其他型別沒有）
@@ -297,6 +322,9 @@ pub(crate) fn build_table(sheets: Vec<String>, sheet: String, grid: Grid) -> Res
         .collect();
     let row_numbers: Vec<u32> = if grid.keep_blank {
         body_idx.iter().map(|&i| grid.first_row + i as u32).collect()
+    } else if grid.page.is_some() {
+        // 資料庫的某一頁：列號是整份資料中的第幾列（rows[0] 是標題列，不算），前端靠它在換頁後仍能認出同一列
+        body_idx.iter().map(|&i| grid.first_row + (i - head_idx - 1) as u32).collect()
     } else {
         (1..=rows.len() as u32).collect()
     };
@@ -324,7 +352,7 @@ pub(crate) fn build_table(sheets: Vec<String>, sheet: String, grid: Grid) -> Res
             })
             .collect()
     };
-    Ok(TableData { sheets, sheet, headers, rows, row_numbers, styles, raw, kind: None })
+    Ok(TableData { sheets, sheet, headers, rows, row_numbers, styles, raw, kind: None, page: grid.page })
 }
 
 #[cfg(test)]
@@ -334,6 +362,19 @@ mod tests {
 
     fn s(v: &[&str]) -> Vec<String> {
         v.iter().map(|x| x.to_string()).collect()
+    }
+
+    /// 手動壓力測試（安全稽核用）：`LP_STRESS=<檔案路徑> cargo test stress_read -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn stress_read() {
+        let p = std::env::var("LP_STRESS").expect("設定 LP_STRESS");
+        let t0 = std::time::Instant::now();
+        let r = read_table(&p, None);
+        match r {
+            Ok(t) => println!("OK rows={} cols={} 用時 {:?}", t.rows.len(), t.headers.len(), t0.elapsed()),
+            Err(e) => println!("Err {e} 用時 {:?}", t0.elapsed()),
+        }
     }
 
     fn tmp(name: &str) -> PathBuf {
@@ -365,7 +406,7 @@ mod tests {
 
     /// 沒有格式、略過空白列的來源（CSV、之後的資料庫）
     fn plain(rows: Vec<Vec<String>>) -> Grid {
-        Grid { rows, styles: vec![], raw: vec![], first_row: 1, keep_blank: false }
+        Grid { rows, styles: vec![], raw: vec![], first_row: 1, keep_blank: false, page: None }
     }
 
     #[test]
@@ -396,6 +437,7 @@ mod tests {
             raw: vec![],
             first_row: 3,
             keep_blank: true,
+            page: None,
         };
         let t = build_table(vec!["S".into()], "S".into(), grid).unwrap();
         assert_eq!(t.rows, vec![s(&["蘋果", "30"]), s(&["", ""]), s(&["香蕉", "20"])]);

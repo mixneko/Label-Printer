@@ -31,7 +31,7 @@ import {
   naturalTextSize, serialize, setBounded, setTextSize, snapQrSize,
   type ElementData, type Kind,
 } from "./elements";
-import { DOTS_PER_MM, loadSettings, mmToDots, PRINT_LANGS, saveSettings, thresholdOf, type Settings } from "./settings";
+import { clampSize, DOTS_PER_MM, loadSettings, type SizeSettingKey, mmToDots, PRINT_LANGS, saveSettings, thresholdOf, type Settings } from "./settings";
 import { placeholdersOf, substitute, type Placeholder, type Raw, type RawRow, type Row } from "./template";
 import { renderFormatList } from "./fieldformat";
 import { initFontCombo } from "./fontcombo";
@@ -894,8 +894,8 @@ async function loadLabelFile(path: string): Promise<void> {
   try {
     const data = JSON.parse(text);
     if (data.version !== 1 || !Array.isArray(data.elements)) throw new Error(tr("不是有效的標籤檔"));
-    settings.tplWmm = Number(data.tplWmm) || settings.tplWmm;
-    settings.tplHmm = Number(data.tplHmm) || settings.tplHmm;
+    settings.tplWmm = clampSize("tplWmm", data.tplWmm, settings.tplWmm);
+    settings.tplHmm = clampSize("tplHmm", data.tplHmm, settings.tplHmm);
     saveSettings(settings);
     syncSettingsInputs();
     buildStage();
@@ -1377,7 +1377,9 @@ function bindSettings(): void {
   bindQuality();
   for (const [id, key] of numFields) {
     $<HTMLInputElement>(id).addEventListener("change", (e) => {
-      (settings[key] as number) = Number((e.target as HTMLInputElement).value);
+      const raw = Number((e.target as HTMLInputElement).value);
+      (settings[key] as number) = key === "port" ? raw : clampSize(key as SizeSettingKey, raw, settings[key] as number);
+      if (key !== "port") (e.target as HTMLInputElement).value = String(settings[key]); // 超出範圍時把欄位改回實際採用的值
       saveSettings(settings);
       if (key === "tplWmm" || key === "tplHmm") {
         // 變更範本尺寸時保留現有物件

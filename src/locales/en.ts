@@ -550,6 +550,22 @@ export const en: Table = {
   "縮小": "Zoom out",
   "實際大小 (100%)": "Actual size (100%)",
   "畫布可以放大縮小：Ctrl＋滾輪、右下角的縮放按鈕、「檢視」選單或 Ctrl＋加號／減號（Ctrl＋0 符合視窗、Ctrl＋1 實際大小）": "The canvas can now be zoomed: Ctrl + mouse wheel, the zoom buttons at the bottom right, the View menu, or Ctrl plus/minus (Ctrl+0 fits the window, Ctrl+1 shows the actual size)",
+  // v1.0.1 安全強化
+  "標籤檔含有外部的圖片網址，為了安全已拒絕開啟": "The label file contains an external image URL and was not opened, for your safety",
+  "檔案超過 256 MB，為避免程式當掉已拒絕開啟": "The file is larger than 256 MB and was not opened, to keep the program from crashing",
+  "壓縮包內的檔案過多，為避免程式當掉已拒絕開啟": "The archive contains too many files and was not opened, to keep the program from crashing",
+  "檔案展開後超過 300 MB，為避免程式當掉已拒絕開啟": "The file expands to more than 300 MB and was not opened, to keep the program from crashing",
+  "工作表「{name}」的範圍過大（約 {area} 格），為避免程式當掉已拒絕開啟": "The range of sheet {name} is too large (about {area} cells) and was not opened, to keep the program from crashing",
+  "不允許存取這種檔案": "Access to this kind of file is not allowed",
+  "標籤檔過大，已拒絕開啟": "The label file is too large and was not opened",
+  "強化安全性：開啟惡意構造或過大的 Excel／CSV 檔不再讓程式當掉，會直接拒絕並說明原因": "Security hardening: opening a maliciously crafted or oversized Excel/CSV file no longer crashes the program; it is refused with an explanation",
+  "強化安全性：標籤檔裡的外部圖片網址會被拒絕（避免開啟檔案時偷偷對外連線）；紙張與標籤尺寸限制在 1～1000 mm、間隙最多 100 mm": "Security hardening: external image URLs in label files are refused (so opening a file cannot secretly connect to the internet); paper and label sizes are limited to 1–1000 mm and the gap to 100 mm",
+  "強化安全性：啟用內容安全政策（CSP），並限制程式只能讀寫標籤檔（.lpxl／.json）與匯出的 PDF；自動發布流程使用的工具也改為固定版本": "Security hardening: a Content Security Policy (CSP) is now enabled, and the program can only read and write label files (.lpxl/.json) and exported PDFs; the tools used by the automated release process are now pinned to fixed versions",
+  // v1.0.1 資料分頁
+  "第 {p} / {n} 頁（共 {total} 列）": "Page {p} / {n} ({total} rows)",
+  "第 {p} 頁": "Page {p}",
+  "資料庫的資料是一頁一頁讀的，這裡只作用在目前這一頁": "Database data is read one page at a time; this only applies to the current page",
+  "資料庫改為分頁讀取：每頁最多 1,000 列，幾萬筆的資料表也不會讓程式卡住；勾選的列換頁後仍會保留（Excel／CSV 列數很多時同樣分頁顯示）": "Databases are now read page by page: at most 1,000 rows per page, so tables with tens of thousands of rows no longer freeze the program; checked rows are kept when you change pages (long Excel/CSV files are paged too)",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Sticker sheet / A4 layout print…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "The cells extend beyond the paper. Reduce the columns or rows, or reduce the margins and gaps.",

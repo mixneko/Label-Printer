@@ -1,7 +1,7 @@
 // 「新增標籤」尺寸視窗與直接開程式時的歡迎視窗（從 main.ts 拆出）。需要主程式的功能由 initStartDialogs 注入。
 import { N, t as tr } from "./i18n";
 import { baseName, loadRecent, shortDir } from "./recent";
-import type { Settings } from "./settings";
+import { MAX_GAP_MM, MAX_SIZE_MM, type Settings } from "./settings";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -54,7 +54,7 @@ export function askNewSize(): Promise<boolean> {
     $("new-cancel").onclick = () => dlg.close();
     $("new-ok").onclick = () => {
       const vals = NEW_FIELDS.map(([id]) => Number($<HTMLInputElement>(id).value));
-      if (vals.some((v, i) => !Number.isFinite(v) || v < SIZE_FIELDS[i].min)) { deps.setStatus(tr("請輸入有效的尺寸"), "err"); return; }
+      if (vals.some((v, i) => !Number.isFinite(v) || v < SIZE_FIELDS[i].min || v > (SIZE_FIELDS[i].key === "gapMm" ? MAX_GAP_MM : MAX_SIZE_MM))) { deps.setStatus(tr("請輸入有效的尺寸"), "err"); return; }
       NEW_FIELDS.forEach(([, key], i) => { deps.settings[key] = Math.round(vals[i] * 10) / 10; });
       deps.saveSettings(deps.settings);
       deps.syncSettingsInputs();

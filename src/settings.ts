@@ -78,6 +78,13 @@ const clamp = (v: unknown, min: number, max: number, fallback: number): number =
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 };
 
+/** 紙張／標籤尺寸的合理範圍（mm）。沒有上限的話，惡意標籤檔寫個 20000 mm 就會把畫布撐爆，而且會被存進設定、之後每次開啟都壞掉 */
+export const MAX_SIZE_MM = 1000;
+export const MAX_GAP_MM = 100;
+export type SizeSettingKey = "paperWmm" | "paperHmm" | "tplWmm" | "tplHmm" | "gapMm";
+export const clampSize = (key: SizeSettingKey, v: unknown, fallback: number): number =>
+  Math.round(clamp(v, key === "gapMm" ? 0 : 1, key === "gapMm" ? MAX_GAP_MM : MAX_SIZE_MM, fallback) * 10) / 10;
+
 /** 黑白轉換的門檻（0～255）：亮度低於它的點印成黑。加粗等級越高，門檻越高，筆畫越粗 */
 export const thresholdOf = (s: Pick<Settings, "boldness">): number => 128 + clamp(s.boldness, 0, 4, 0) * 20;
 
@@ -96,6 +103,7 @@ export function loadSettings(): Settings {
       if (stored.printerLang === undefined) s.printerLang = "tspl";
       // auto＝依驅動偵測；office＝一般印表機（不是標籤機，列印與預覽改用 A4／貼紙紙排版）；其餘為標籤機語言
       if (s.printerLang !== "auto" && s.printerLang !== "office" && !PRINT_LANGS.some((l) => l.id === s.printerLang)) s.printerLang = "auto";
+      for (const k of ["paperWmm", "paperHmm", "tplWmm", "tplHmm", "gapMm"] as const) s[k] = clampSize(k, s[k], DEFAULT_SETTINGS[k]);
       s.density = Math.round(clamp(s.density, 0, 15, DEFAULT_SETTINGS.density));
       s.speed = Math.round(clamp(s.speed, 1, 6, DEFAULT_SETTINGS.speed));
       s.boldness = Math.round(clamp(s.boldness, 0, 4, 0));

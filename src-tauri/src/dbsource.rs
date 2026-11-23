@@ -17,11 +17,66 @@ use rusqlite::types::ValueRef;
 use serde::Serialize;
 use std::path::Path;
 
-/// 最多讀取的資料列數：太大的資料表會讓畫面卡住，請改用 SQL 查詢縮小範圍
-pub(crate) const MAX_ROWS: usize = 100_000;
+/// 資料庫一次最多讀取（也是畫面上每頁顯示）的資料列數：大的資料表一頁一頁讀，不會一次全部載入而讓程式卡死
+pub(crate) const PAGE_ROWS: usize = 1000;
 /// 單一文字欄位最多讀取的字元數（備忘錄、長文字欄位會被截斷）
 pub(crate) const MAX_TEXT: usize = 4096;
 const BATCH: usize = 512;
+
+/// 要讀的是第幾列開始的哪一頁（0 起算的列位移與每頁筆數；每頁最多 `PAGE_ROWS`）
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Page {
+    pub offset: usize,
+    pub limit: usize,
+}
+
+impl Page {
+    pub fn new(offset: Option<u64>, limit: Option<u64>) -> Page {
+        Page {
+            offset: offset.unwrap_or(0).min(4_000_000_000) as usize,
+            limit: (limit.unwrap_or(PAGE_ROWS as u64) as usize).clamp(1, PAGE_ROWS),
+        }
+    }
+}
+
+impl Default for Page {
+    fn default() -> Self {
+        Page { offset: 0, limit: PAGE_ROWS }
+    }
+}
+
+/// 從一串依序讀進來的資料列中切出一頁：位移之前的略過、取滿一頁後若還有下一列就標記 `more` 並停止
+pub(crate) struct Slicer {
+    page: Page,
+    seen: usize,
+    kept: usize,
+    pub more: bool,
+}
+
+pub(crate) enum Take {
+    Skip,
+    Keep,
+    Stop,
+}
+
+impl Slicer {
+    pub fn new(page: Page) -> Slicer {
+        Slicer { page, seen: 0, kept: 0, more: false }
+    }
+    pub fn next(&mut self) -> Take {
+        if self.seen < self.page.offset {
+            self.seen += 1;
+            return Take::Skip;
+        }
+        if self.kept >= self.page.limit {
+            self.more = true;
+            return Take::Stop;
+        }
+        self.kept += 1;
+        self.seen += 1;
+        Take::Keep
+    }
+}
 
 fn ext_of(path: &str) -> String {
     Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase()
@@ -123,25 +178,26 @@ pub(crate) fn check_select(sql: &str) -> Result<&str, String> {
     Ok(q)
 }
 
-pub(crate) fn read(path: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid), String> {
+pub(crate) fn read(path: &str, sheet: Option<&str>, page: Page) -> Result<(Vec<String>, String, Grid), String> {
     if crate::netdb::is_net_source(path) {
-        return crate::netdb::read(path, sheet);
+        return crate::netdb::read(path, sheet, page);
     }
     if let Some(cs) = path.strip_prefix("odbc:") {
-        return read_odbc(cs, sheet);
+        return read_odbc(cs, sheet, page);
     }
     match ext_of(path).as_str() {
         "mdb" | "accdb" => {
             if !Path::new(path).is_file() {
                 return Err(format!("找不到檔案：{path}"));
             }
-            read_odbc(&format!("Driver={{Microsoft Access Driver (*.mdb, *.accdb)}};DBQ={path};ReadOnly=1;"), sheet)
+            read_odbc(&format!("Driver={{Microsoft Access Driver (*.mdb, *.accdb)}};DBQ={path};ReadOnly=1;"), sheet, page)
         }
-        _ => read_sqlite(path, sheet),
+        _ => read_sqlite(path, sheet, page),
     }
 }
 
-pub(crate) fn finish(headers: Vec<String>, rows: Vec<Vec<Cell>>) -> Grid {
+/// `rows` 已經是這一頁的資料列；`total` 是整份資料的總列數（只在讀第一頁時才去算，算不出來為 None），`more` 表示後面還有下一頁
+pub(crate) fn finish(headers: Vec<String>, rows: Vec<Vec<Cell>>, page: Page, total: Option<u64>, more: bool) -> Grid {
     let n = headers.len();
     let mut out_rows = vec![headers];
     let mut out_raw: Vec<Vec<Option<Raw>>> = vec![vec![None; n]];
@@ -150,7 +206,14 @@ pub(crate) fn finish(headers: Vec<String>, rows: Vec<Vec<Cell>>) -> Grid {
         out_rows.push(strs);
         out_raw.push(raws);
     }
-    Grid { rows: out_rows, styles: vec![], raw: out_raw, first_row: 1, keep_blank: false }
+    Grid {
+        rows: out_rows,
+        styles: vec![],
+        raw: out_raw,
+        first_row: page.offset as u32 + 1,
+        keep_blank: false,
+        page: Some(crate::sheet::PageInfo { offset: page.offset as u64, limit: page.limit as u64, total, more }),
+    }
 }
 
 /// 選定的資料表名稱（沒指定或不在清單內時用第一個）；自訂查詢（`sql:` 開頭）原樣保留
@@ -173,7 +236,7 @@ pub(crate) fn listing(tables: &[String], chosen: &str) -> Vec<String> {
 
 // ---------- SQLite ----------
 
-fn read_sqlite(path: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid), String> {
+fn read_sqlite(path: &str, sheet: Option<&str>, page: Page) -> Result<(Vec<String>, String, Grid), String> {
     use rusqlite::{Connection, OpenFlags};
     if !Path::new(path).is_file() {
         return Err(format!("找不到檔案：{path}"));
@@ -192,6 +255,12 @@ fn read_sqlite(path: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, 
         Some(q) => check_select(q)?.to_string(),
         None => format!("SELECT * FROM \"{}\"", chosen.replace('"', "\"\"")),
     };
+    // 總列數只在讀第一頁時才算（之後換頁由前端沿用），算不出來就不顯示總數
+    let total: Option<u64> = if page.offset == 0 {
+        conn.query_row(&format!("SELECT COUNT(*) FROM ({sql})"), [], |r| r.get::<_, i64>(0)).ok().map(|n| n.max(0) as u64)
+    } else {
+        None
+    };
     let mut st = conn.prepare(&sql).map_err(|e| format!("查詢失敗：{e}"))?;
     let headers: Vec<String> = st.column_names().into_iter().map(|s| s.to_string()).collect();
     // 宣告型別含 DATE／TIME 的欄位，文字內容符合日期格式時當作日期（讓欄位格式可用）
@@ -201,9 +270,12 @@ fn read_sqlite(path: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, 
         .collect();
     let mut rows: Vec<Vec<Cell>> = Vec::new();
     let mut q = st.query([]).map_err(|e| format!("查詢失敗：{e}"))?;
+    let mut slice = Slicer::new(page);
     while let Some(row) = q.next().map_err(|e| format!("讀取資料失敗：{e}"))? {
-        if rows.len() >= MAX_ROWS {
-            return Err(format!("資料超過 {MAX_ROWS} 列，請改用 SQL 查詢縮小範圍"));
+        match slice.next() {
+            Take::Skip => continue,
+            Take::Stop => break,
+            Take::Keep => {}
         }
         let mut r = Vec::with_capacity(headers.len());
         for i in 0..headers.len() {
@@ -223,7 +295,7 @@ fn read_sqlite(path: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, 
         }
         rows.push(r);
     }
-    Ok((listing(&tables, &chosen), chosen, finish(headers, rows)))
+    Ok((listing(&tables, &chosen), chosen, finish(headers, rows, page, total, slice.more)))
 }
 
 // ---------- ODBC（Access、SQL Server、MySQL、PostgreSQL、Oracle…）----------
@@ -244,7 +316,7 @@ fn quote_ident(name: &str, quote: Option<char>) -> String {
     }
 }
 
-fn read_odbc(cs: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid), String> {
+fn read_odbc(cs: &str, sheet: Option<&str>, page: Page) -> Result<(Vec<String>, String, Grid), String> {
     let env = Environment::new().map_err(odbc_err)?;
     let conn = env
         .connect_with_connection_string(cs, ConnectionOptions { login_timeout_sec: Some(8), ..ConnectionOptions::default() }) // 連不上時 8 秒就回報，不要讓使用者等 15 秒以上
@@ -295,10 +367,13 @@ fn read_odbc(cs: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid
     let mut block = cursor.bind_buffer(ColumnarBuffer::new(bufs)).map_err(odbc_err)?;
 
     let mut rows: Vec<Vec<Cell>> = Vec::new();
-    while let Some(batch) = block.fetch().map_err(odbc_err)? {
+    let mut slice = Slicer::new(page);
+    'fetch: while let Some(batch) = block.fetch().map_err(odbc_err)? {
         for r in 0..batch.num_rows() {
-            if rows.len() >= MAX_ROWS {
-                return Err(format!("資料超過 {MAX_ROWS} 列，請改用 SQL 查詢縮小範圍"));
+            match slice.next() {
+                Take::Skip => continue,
+                Take::Stop => break 'fetch,
+                Take::Keep => {}
             }
             let mut out = Vec::with_capacity(ncols as usize);
             for (c, t) in types.iter().enumerate() {
@@ -311,7 +386,8 @@ fn read_odbc(cs: &str, sheet: Option<&str>) -> Result<(Vec<String>, String, Grid
             rows.push(out);
         }
     }
-    Ok((listing(&tables, &chosen), chosen, finish(headers, rows)))
+    // ODBC 不另外算總列數（各家驅動的 COUNT 寫法與效能不一），只靠「還有沒有下一頁」
+    Ok((listing(&tables, &chosen), chosen, finish(headers, rows, page, None, slice.more)))
 }
 
 /// 依欄位型別把文字轉成儲存格：日期／時間戳 → 日期；數字型別 → 數字（失敗則當文字）；其餘為文字
@@ -399,6 +475,51 @@ mod tests {
         assert_eq!(t.raw[0][3], Some(Raw::Date([2027, 11, 30, 0, 0, 0, 0])));
         assert!(t.raw[0][1].is_none() && t.raw[0][4].is_none());
         assert_eq!(crate::sheet::format_raw(t.raw[0][3].as_ref().unwrap(), "yyyy/mm/dd").as_deref(), Some("2027/11/30"));
+    }
+
+    #[test]
+    fn sqlite_reads_one_page_at_a_time() {
+        let path = tmp("db-paging.sqlite");
+        let c = rusqlite::Connection::open(&path).unwrap();
+        c.execute_batch("CREATE TABLE big (n INTEGER, name TEXT); BEGIN;").unwrap();
+        for i in 1..=2500 {
+            c.execute("INSERT INTO big VALUES (?1, ?2)", rusqlite::params![i, format!("item {i}")]).unwrap();
+        }
+        c.execute_batch("COMMIT;").unwrap();
+        drop(c);
+
+        // 預設一頁 1000 列；第一頁帶總列數與「還有下一頁」
+        let p0 = crate::sheet::read_table_page(&path, None, None, None).unwrap();
+        assert_eq!(p0.rows.len(), 1000);
+        assert_eq!(p0.rows[0][0], "1");
+        let info = p0.page.clone().unwrap();
+        assert_eq!((info.offset, info.limit, info.total, info.more), (0, 1000, Some(2500), true));
+        assert_eq!(p0.row_numbers[0], 1);
+
+        // 第二頁：列號接續，不重複算總數；最後一頁沒有下一頁
+        let p1 = crate::sheet::read_table_page(&path, None, Some(1000), None).unwrap();
+        assert_eq!((p1.rows[0][0].as_str(), p1.rows.len(), p1.row_numbers[0]), ("1001", 1000, 1001));
+        assert_eq!(p1.page.as_ref().unwrap().total, None);
+        let p2 = crate::sheet::read_table_page(&path, None, Some(2000), None).unwrap();
+        assert_eq!((p2.rows.len(), p2.rows.last().unwrap()[0].as_str(), p2.page.unwrap().more), (500, "2500", false));
+
+        // 每頁筆數可以更小，但不能超過 1000；位移超過總數是空的一頁
+        assert_eq!(crate::sheet::read_table_page(&path, None, Some(5), Some(10)).unwrap().rows.len(), 10);
+        assert_eq!(crate::sheet::read_table_page(&path, None, None, Some(999_999)).unwrap().rows.len(), 1000);
+        let beyond = crate::sheet::read_table_page(&path, None, Some(9000), None).unwrap();
+        assert!(beyond.rows.is_empty() && !beyond.page.unwrap().more);
+
+        // 自訂查詢也分頁
+        let q = crate::sheet::read_table_page(&path, Some("sql:SELECT n FROM big WHERE n % 2 = 0"), Some(1000), None).unwrap();
+        assert_eq!((q.rows.len(), q.rows[0][0].as_str(), q.page.unwrap().more), (250, "2002", false));
+    }
+
+    #[test]
+    fn page_limits_are_clamped() {
+        assert_eq!((Page::new(None, None).offset, Page::new(None, None).limit), (0, PAGE_ROWS));
+        assert_eq!(Page::new(None, Some(0)).limit, 1);
+        assert_eq!(Page::new(None, Some(1_000_000)).limit, PAGE_ROWS);
+        assert!(Page::new(Some(u64::MAX), None).offset <= 4_000_000_000);
     }
 
     #[test]
@@ -511,7 +632,7 @@ mod tests {
     fn odbc_unreachable_host_reports_error() {
         let t = std::time::Instant::now();
         let cs = "Driver={ODBC Driver 17 for SQL Server};Server=127.0.0.1,1;Database=x;UID=u;PWD=p;";
-        let r = read(&format!("odbc:{cs}"), None);
+        let r = read(&format!("odbc:{cs}"), None, Page::default());
         let msg = r.err().expect("應該連線失敗");
         println!("{:?} 後回傳：{msg}", t.elapsed());
         assert!(msg.len() > 12, "錯誤訊息是空的：{msg}");

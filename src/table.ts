@@ -26,7 +26,12 @@ interface TableData {
   raw?: (Raw | null)[][];
   /** 來源種類：資料庫為 "db"（「工作表」改稱「資料表」）；Excel、CSV 沒有這個欄位 */
   kind?: "db";
+  /** 資料庫是一頁一頁讀的：目前這一頁的位移、每頁筆數、總列數（只有第一頁才有）與有沒有下一頁；Excel／CSV 沒有這個欄位 */
+  page?: { offset: number; limit: number; total?: number; more: boolean };
 }
+
+/** 畫面每頁最多顯示的列數（資料庫由後端一頁一頁讀；Excel／CSV 整份讀進來，只分頁顯示，以免一次畫出幾萬列而卡住） */
+export const PAGE_SIZE = 1000;
 
 export interface TableHandlers {
   /** 點選某一列：預覽該列套用後的標籤（raw 為該列各欄的原始值，供欄位格式使用） */
@@ -46,6 +51,11 @@ export interface TableHandlers {
 export function selectedRows(): { rows: Row[]; raws: RawRow[]; names: string[] } | null {
   if (!data || checked.size === 0) return null;
   const idx = [...checked].sort((a, b) => a - b);
+  if (isDb()) {
+    // 資料庫只在畫面上留著目前這一頁，換頁前勾選的列另外存在 picked
+    const got = idx.map((k) => picked.get(k)).filter((x): x is Picked => !!x);
+    return { rows: got.map((x) => x.row), raws: got.map((x) => x.raw), names: got.map((x) => t("第 {n} 列", { n: x.num })) };
+  }
   return {
     rows: idx.map(rowOf),
     raws: idx.map(rawOf),
@@ -64,9 +74,43 @@ let path = "";
 /** 畫面上顯示的來源名稱（資料庫連線不顯示整串連線字串，也不能出現密碼）；空字串＝用檔名 */
 let sourceLabel = "";
 let data: TableData | null = null;
+/**
+ * 勾選的列，以「列的編號」記錄：Excel／CSV 是資料列的索引；資料庫是整份資料中的第幾列（0 起算，換頁後仍指同一列）。
+ */
 const checked = new Set<number>();
+/** 資料庫換頁後原本那一頁不在記憶體裡，所以勾選時就把該列的資料另外存起來，列印時才拿得到 */
+interface Picked { row: Row; raw: RawRow; num: number }
+const picked = new Map<number, Picked>();
 let active = -1;
 let h: TableHandlers;
+/** Excel／CSV：目前顯示的第一列（每頁 PAGE_SIZE 列） */
+let pageStart = 0;
+/** 資料庫的總列數（第一頁時由後端算出；算不出來為 null） */
+let dbTotal: number | null = null;
+
+/** 目前是不是「一頁一頁向資料庫讀」的來源 */
+const isDb = (): boolean => !!data && data.kind === "db" && !!data.page;
+/** data.rows[k] 的「列編號」 */
+const keyOf = (k: number): number => (isDb() ? (data!.rowNumbers[k] ?? k + 1) - 1 : k);
+/** 目前畫面上顯示的是 data.rows 的哪幾列 */
+function visibleRows(): number[] {
+  if (!data) return [];
+  const end = isDb() ? data.rows.length : Math.min(data.rows.length, pageStart + PAGE_SIZE);
+  const start = isDb() ? 0 : pageStart;
+  return Array.from({ length: Math.max(0, end - start) }, (_, i) => start + i);
+}
+/** 「全選／全不選／反選」作用的範圍：Excel／CSV 是全部資料列；資料庫只有目前這一頁（其他頁沒有載入） */
+function scopeKeys(): number[] {
+  if (!data) return [];
+  const ks = isDb() ? visibleRows() : data.rows.map((_, k) => k);
+  return ks.filter((k) => !isBlank(k)).map(keyOf);
+}
+/** 總列數（不含空白列）；資料庫沒有總數時以「已讀到的位置」代替 */
+function totalCount(): number {
+  if (!data) return 0;
+  if (isDb()) return dbTotal ?? data.page!.offset + data.rows.length;
+  return printableCount();
+}
 
 const rowOf = (i: number): Row =>
   Object.fromEntries(data!.headers.map((name, c) => [name, data!.rows[i][c] ?? ""]));
@@ -99,8 +143,42 @@ async function load(sheet?: string): Promise<void> {
   const t = await invoke<TableData>("read_table", { path, sheet: sheet ?? null });
   data = t;
   checked.clear();
+  picked.clear();
+  pageStart = 0;
+  dbTotal = t.page?.total ?? null;
   active = -1;
   render();
+}
+
+/** 資料庫換到另一頁（從後端只讀那一頁）；勾選的列不受影響 */
+async function loadDbPage(offset: number): Promise<void> {
+  if (!data) return;
+  const t = await invoke<TableData>("read_table", { path, sheet: data.sheet, offset, limit: PAGE_SIZE });
+  data = t;
+  if (t.page?.total != null) dbTotal = t.page.total;
+  active = -1;
+  render();
+  document.querySelector(".data-scroll")?.scrollTo({ top: 0 });
+}
+
+/** 上一頁（-1）／下一頁（+1） */
+async function turnPage(delta: number): Promise<void> {
+  if (!data) return;
+  try {
+    if (isDb()) {
+      const off = Math.max(0, data.page!.offset + delta * PAGE_SIZE);
+      if (off !== data.page!.offset) await loadDbPage(off);
+    } else {
+      const next = Math.max(0, Math.min(Math.floor((data.rows.length - 1) / PAGE_SIZE) * PAGE_SIZE, pageStart + delta * PAGE_SIZE));
+      if (next === pageStart) return;
+      pageStart = next;
+      active = -1;
+      render();
+      document.querySelector(".data-scroll")?.scrollTo({ top: 0 });
+    }
+  } catch (e) {
+    h.onStatus(String(e), "err");
+  }
 }
 
 /** 以指定的來源載入（資料庫連線對話框使用）：path 可以是資料庫檔案，或 `odbc:` 開頭的連線字串；sheet 可以是資料表名或 `sql:` 查詢 */
@@ -115,7 +193,7 @@ export async function loadSource(p: string, sheet?: string, label = ""): Promise
     sourceLabel = prev.label;
     throw e;
   }
-  h.onStatus(t("已載入資料來源：{n} 筆資料，勾選要列印的列", { n: printableCount() }), "ok");
+  h.onStatus(t("已載入資料來源：{n} 筆資料，勾選要列印的列", { n: totalCount() }), "ok");
 }
 
 const FILE_EXTS = {
@@ -137,20 +215,55 @@ async function importFile(): Promise<void> {
     path = picked;
     sourceLabel = "";
     await load();
-    h.onStatus(t("已載入資料來源：{n} 筆資料，勾選要列印的列", { n: printableCount() }), "ok");
+    h.onStatus(t("已載入資料來源：{n} 筆資料，勾選要列印的列", { n: totalCount() }), "ok");
   } catch (e) {
     h.onStatus(t("載入資料來源失敗：{err}", { err: String(e) }), "err");
   }
 }
 
 function updateCount(): void {
-  const total = printableCount();
-  $("data-count").textContent = t("已選 {n} / {total} 列", { n: checked.size, total });
+  $("data-count").textContent = t("已選 {n} / {total} 列", { n: checked.size, total: totalCount() });
   $<HTMLButtonElement>("data-print").disabled = checked.size === 0;
   $<HTMLButtonElement>("data-preview").disabled = checked.size === 0;
   const all = $<HTMLInputElement>("data-check-all");
-  all.checked = total > 0 && checked.size === total;
-  all.indeterminate = checked.size > 0 && !all.checked;
+  const scope = scopeKeys();
+  all.checked = scope.length > 0 && scope.every((k) => checked.has(k));
+  all.indeterminate = scope.some((k) => checked.has(k)) && !all.checked;
+}
+
+/** 分頁列：Excel／CSV 超過一頁、或資料庫不只一頁時才出現 */
+function updatePager(): void {
+  const pager = $("data-pager");
+  if (!data) {
+    pager.hidden = true;
+    return;
+  }
+  let label = "";
+  let prev = false;
+  let next = false;
+  if (isDb()) {
+    const p = data.page!;
+    prev = p.offset > 0;
+    next = p.more;
+    const no = Math.floor(p.offset / PAGE_SIZE) + 1;
+    label = dbTotal != null ? t("第 {p} / {n} 頁（共 {total} 列）", { p: no, n: Math.max(1, Math.ceil(dbTotal / PAGE_SIZE)), total: dbTotal }) : t("第 {p} 頁", { p: no });
+  } else {
+    const pages = Math.max(1, Math.ceil(data.rows.length / PAGE_SIZE));
+    const no = Math.floor(pageStart / PAGE_SIZE) + 1;
+    prev = no > 1;
+    next = no < pages;
+    label = t("第 {p} / {n} 頁（共 {total} 列）", { p: no, n: pages, total: data.rows.length });
+  }
+  pager.hidden = !(prev || next);
+  $("data-page").textContent = label;
+  $<HTMLButtonElement>("data-prev").disabled = !prev;
+  $<HTMLButtonElement>("data-next").disabled = !next;
+  // 資料庫的全選／全不選／反選只作用在目前這一頁，滑過去時提醒
+  const hint = isDb() ? t("資料庫的資料是一頁一頁讀的，這裡只作用在目前這一頁") : "";
+  for (const id of ["data-all", "data-none", "data-invert"]) {
+    if (hint) $(id).title = hint;
+    else $(id).removeAttribute("title");
+  }
 }
 
 function render(): void {
@@ -190,17 +303,18 @@ function render(): void {
   allTh.append(all);
   head.append(allTh, el("th", "#"), ...data.headers.map((n) => el("th", n)));
 
-  const body = data.rows.map((r, i) => {
+  const body = visibleRows().map((i) => {
+    const r = data!.rows[i];
     const blank = isBlank(i);
     const tr = el("tr", "", [i === active ? "active" : "", blank ? "blank" : ""].join(" ").trim());
     tr.dataset.i = String(i);
     const cb = el("input");
     cb.type = "checkbox";
-    cb.checked = checked.has(i);
+    cb.checked = checked.has(keyOf(i));
     cb.disabled = blank; // 空白列不能勾選
     cb.addEventListener("click", (e) => e.stopPropagation());
     cb.addEventListener("change", () => {
-      cb.checked ? checked.add(i) : checked.delete(i);
+      setChecked(i, cb.checked);
       updateCount();
     });
     const td = el("td");
@@ -223,12 +337,30 @@ function render(): void {
   });
   table.replaceChildren(head, ...body);
   updateCount();
+  updatePager();
+}
+
+/** 勾選或取消勾選 data.rows[k]；資料庫要把該列的資料一併存起來（換頁後才印得出來） */
+function setChecked(k: number, on: boolean): void {
+  const key = keyOf(k);
+  if (!on) {
+    checked.delete(key);
+    picked.delete(key);
+    return;
+  }
+  checked.add(key);
+  if (isDb()) picked.set(key, { row: rowOf(k), raw: rawOf(k), num: key + 1 });
 }
 
 function setAll(on: boolean): void {
-  checked.clear();
-  if (on) data?.rows.forEach((_, i) => { if (!isBlank(i)) checked.add(i); }); // 空白列不納入
-  document.querySelectorAll<HTMLInputElement>("#data-table td input").forEach((cb) => { cb.checked = on && !cb.disabled; });
+  if (!data) return;
+  // 空白列不納入；Excel／CSV 作用在全部資料列，資料庫只有目前這一頁
+  const ks = isDb() ? visibleRows() : data.rows.map((_, k) => k);
+  for (const k of ks) if (!isBlank(k)) setChecked(k, on);
+  document.querySelectorAll<HTMLInputElement>("#data-table td input").forEach((cb) => {
+    const k = Number(cb.closest("tr")?.dataset.i);
+    cb.checked = checked.has(keyOf(k)) && !cb.disabled;
+  });
   updateCount();
 }
 const selectAll = () => setAll(true);
@@ -236,10 +368,8 @@ const selectNone = () => setAll(false);
 
 function invert(): void {
   if (!data) return;
-  const next = new Set<number>();
-  data.rows.forEach((_, i) => { if (!checked.has(i) && !isBlank(i)) next.add(i); });
-  checked.clear();
-  next.forEach((i) => checked.add(i));
+  const ks = isDb() ? visibleRows() : data.rows.map((_, k) => k);
+  for (const k of ks) if (!isBlank(k)) setChecked(k, !checked.has(keyOf(k)));
   render();
 }
 
@@ -299,7 +429,7 @@ export function initTable(handlers: TableHandlers): void {
   $("data-reload").addEventListener("click", () => {
     if (!path) return;
     load(data?.sheet).then(
-      () => h.onStatus(t("已重新讀取，共 {n} 筆資料", { n: printableCount() }), "ok"),
+      () => h.onStatus(t("已重新讀取，共 {n} 筆資料", { n: totalCount() }), "ok"),
       (e) => h.onStatus(t("重新讀取失敗：{err}", { err: String(e) }), "err"),
     );
   });
@@ -307,9 +437,11 @@ export function initTable(handlers: TableHandlers): void {
     load((e.target as HTMLSelectElement).value).catch((err) => h.onStatus(String(err), "err"));
   });
   $("data-preview").addEventListener("click", () => h.onPrintPreview?.());
+  $("data-prev").addEventListener("click", () => void turnPage(-1));
+  $("data-next").addEventListener("click", () => void turnPage(1));
   $("data-print").addEventListener("click", async () => {
-    if (!data || checked.size === 0) return;
-    const idx = [...checked].sort((a, b) => a - b);
-    await h.onPrint(idx.map(rowOf), idx.map(rawOf));
+    const sel = selectedRows();
+    if (!sel) return;
+    await h.onPrint(sel.rows, sel.raws);
   });
 }

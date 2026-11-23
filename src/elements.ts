@@ -7,6 +7,9 @@ import QRCode from "qrcode";
 import { PLACEHOLDER, substitute, type Row } from "./template";
 import { t as tr } from "./i18n";
 
+/** 圖片來源只接受內嵌的點陣圖資料網址（`data:image/…`）；空值（沒有圖）也視為不安全，開啟時一併拒絕 */
+export const isSafeImageSrc = (src: unknown): src is string => typeof src === "string" && /^data:image\/(png|jpe?g|gif|webp|bmp|svg\+xml)[;,]/i.test(src);
+
 export type Kind = "text" | "rect" | "qr" | "barcode" | "image";
 
 export interface ElementData {
@@ -485,6 +488,8 @@ export async function createElement(d: ElementData): Promise<Konva.Shape> {
     }
 
     case "image": {
+      // 標籤檔裡的圖片一律是內嵌的 data: 網址；遠端網址會讓「開啟檔案」變成對外連線（洩漏 IP、探測內網），所以拒絕
+      if (!isSafeImageSrc(d.src)) throw new Error(tr("標籤檔含有外部的圖片網址，為了安全已拒絕開啟"));
       const img = new Image();
       img.src = d.src ?? "";
       await img.decode();

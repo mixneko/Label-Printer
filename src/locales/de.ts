@@ -551,6 +551,22 @@ export const de: Table = {
   "縮小": "Verkleinern",
   "實際大小 (100%)": "Originalgröße (100 %)",
   "畫布可以放大縮小：Ctrl＋滾輪、右下角的縮放按鈕、「檢視」選單或 Ctrl＋加號／減號（Ctrl＋0 符合視窗、Ctrl＋1 實際大小）": "Die Zeichenfläche lässt sich jetzt zoomen: Strg + Mausrad, die Zoom-Schaltflächen unten rechts, das Menü Ansicht oder Strg plus/minus (Strg+0 passt ans Fenster an, Strg+1 zeigt die Originalgröße)",
+  // v1.0.1 安全強化
+  "標籤檔含有外部的圖片網址，為了安全已拒絕開啟": "Die Etikettendatei enthält eine externe Bild-URL und wurde zu Ihrer Sicherheit nicht geöffnet",
+  "檔案超過 256 MB，為避免程式當掉已拒絕開啟": "Die Datei ist größer als 256 MB und wurde nicht geöffnet, damit das Programm nicht abstürzt",
+  "壓縮包內的檔案過多，為避免程式當掉已拒絕開啟": "Das Archiv enthält zu viele Dateien und wurde nicht geöffnet, damit das Programm nicht abstürzt",
+  "檔案展開後超過 300 MB，為避免程式當掉已拒絕開啟": "Die Datei ist entpackt größer als 300 MB und wurde nicht geöffnet, damit das Programm nicht abstürzt",
+  "工作表「{name}」的範圍過大（約 {area} 格），為避免程式當掉已拒絕開啟": "Der Bereich des Blatts {name} ist zu groß (etwa {area} Zellen) und wurde nicht geöffnet, damit das Programm nicht abstürzt",
+  "不允許存取這種檔案": "Der Zugriff auf diese Dateiart ist nicht erlaubt",
+  "標籤檔過大，已拒絕開啟": "Die Etikettendatei ist zu groß und wurde nicht geöffnet",
+  "強化安全性：開啟惡意構造或過大的 Excel／CSV 檔不再讓程式當掉，會直接拒絕並說明原因": "Mehr Sicherheit: Das Öffnen einer manipulierten oder zu großen Excel-/CSV-Datei bringt das Programm nicht mehr zum Absturz; sie wird mit einer Erklärung abgelehnt",
+  "強化安全性：標籤檔裡的外部圖片網址會被拒絕（避免開啟檔案時偷偷對外連線）；紙張與標籤尺寸限制在 1～1000 mm、間隙最多 100 mm": "Mehr Sicherheit: Externe Bild-URLs in Etikettendateien werden abgelehnt (das Öffnen einer Datei kann sich also nicht heimlich mit dem Internet verbinden); Papier- und Etikettengröße sind auf 1–1000 mm, der Abstand auf 100 mm begrenzt",
+  "強化安全性：啟用內容安全政策（CSP），並限制程式只能讀寫標籤檔（.lpxl／.json）與匯出的 PDF；自動發布流程使用的工具也改為固定版本": "Mehr Sicherheit: Eine Content Security Policy (CSP) ist aktiviert, und das Programm darf nur Etikettendateien (.lpxl/.json) und exportierte PDFs lesen und schreiben; die Werkzeuge des automatischen Release-Prozesses sind auf feste Versionen festgelegt",
+  // v1.0.1 資料分頁
+  "第 {p} / {n} 頁（共 {total} 列）": "Seite {p} / {n} ({total} Zeilen)",
+  "第 {p} 頁": "Seite {p}",
+  "資料庫的資料是一頁一頁讀的，這裡只作用在目前這一頁": "Datenbankdaten werden seitenweise gelesen; dies gilt nur für die aktuelle Seite",
+  "資料庫改為分頁讀取：每頁最多 1,000 列，幾萬筆的資料表也不會讓程式卡住；勾選的列換頁後仍會保留（Excel／CSV 列數很多時同樣分頁顯示）": "Datenbanken werden jetzt seitenweise gelesen: höchstens 1.000 Zeilen pro Seite, sodass Tabellen mit zehntausenden Zeilen das Programm nicht mehr einfrieren; markierte Zeilen bleiben beim Seitenwechsel erhalten (lange Excel-/CSV-Dateien werden ebenfalls seitenweise angezeigt)",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Etikettenbogen / A4-Layout drucken…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "Die Felder ragen über das Papier hinaus. Verringern Sie die Spalten oder Zeilen oder die Ränder und Abstände.",

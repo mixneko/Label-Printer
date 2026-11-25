@@ -559,29 +559,30 @@ export const es: Table = {
   "工作表「{name}」的範圍過大（約 {area} 格），為避免程式當掉已拒絕開啟": "El rango de la hoja {name} es demasiado grande (unas {area} celdas) y no se abrió para evitar que el programa se bloquee",
   "不允許存取這種檔案": "No se permite el acceso a este tipo de archivo",
   "標籤檔過大，已拒絕開啟": "El archivo de etiqueta es demasiado grande y no se abrió",
-  "強化安全性：開啟惡意構造或過大的 Excel／CSV 檔不再讓程式當掉，會直接拒絕並說明原因": "Seguridad reforzada: abrir un archivo Excel/CSV malicioso o demasiado grande ya no bloquea el programa; se rechaza con una explicación",
-  "強化安全性：標籤檔裡的外部圖片網址會被拒絕（避免開啟檔案時偷偷對外連線）；紙張與標籤尺寸限制在 1～1000 mm、間隙最多 100 mm": "Seguridad reforzada: se rechazan las URL de imágenes externas en los archivos de etiqueta (abrir un archivo no puede conectarse en secreto a internet); el tamaño del papel y de la etiqueta se limita a 1–1000 mm y la separación a 100 mm",
-  "強化安全性：啟用內容安全政策（CSP），並限制程式只能讀寫標籤檔（.lpxl／.json）與匯出的 PDF；自動發布流程使用的工具也改為固定版本": "Seguridad reforzada: se activa una política de seguridad de contenido (CSP) y el programa solo puede leer y escribir archivos de etiqueta (.lpxl/.json) y PDF exportados; las herramientas del proceso de publicación automática ahora usan versiones fijas",
   // v1.0.1 資料分頁
   "第 {p} / {n} 頁（共 {total} 列）": "Página {p} / {n} ({total} filas)",
   "第 {p} 頁": "Página {p}",
   "資料庫的資料是一頁一頁讀的，這裡只作用在目前這一頁": "Los datos de la base de datos se leen página por página; esto solo afecta a la página actual",
-  "資料庫改為分頁讀取：每頁最多 1,000 列，幾萬筆的資料表也不會讓程式卡住；勾選的列換頁後仍會保留（Excel／CSV 列數很多時同樣分頁顯示）": "Las bases de datos ahora se leen página por página: como máximo 1.000 filas por página, así que las tablas con decenas de miles de filas ya no bloquean el programa; las filas marcadas se conservan al cambiar de página (los archivos Excel/CSV largos también se paginan)",
   // v1.0.1 資料分頁
   "第一頁": "Primera página",
   "最後一頁": "Última página",
   "頁碼": "N.º de página",
   "輸入頁碼，按 Enter 跳到該頁": "Escriba un número de página y pulse Intro para ir a ella",
   // v1.0.1 資料分頁
-  "資料表的分頁列新增「|<」第一頁、「>|」最後一頁，並可輸入頁碼直接跳到該頁，資料很多時不必一頁一頁翻": "La barra de páginas de la tabla de datos ahora tiene |< (primera página) y >| (última página), y puede escribir un número de página para ir directamente a ella, así que ya no tiene que pasar página por página cuando hay muchos datos",
   // v1.0.1 資料分頁
-  "記住上次選的工作表或資料表：下次開同一個 Excel 或資料庫檔案（以及同一個資料庫伺服器）時，直接回到那一個；連線對話框也會記住上次填的自訂查詢": "Recuerda la última hoja o tabla elegida: la próxima vez que abra el mismo archivo de Excel o de base de datos (o el mismo servidor) volverá directamente a ella; el cuadro de conexión también recuerda la última consulta personalizada",
   // v1.0.1 資料分頁
-  "安裝時可以選擇「只給我使用」或「所有人使用」（安裝到 Program Files，需要系統管理員權限）；設定與最近開啟的檔案仍是每位使用者各自一份": "Durante la instalación ahora puede elegir «Solo para mí» o «Para todos los usuarios» (se instala en Program Files y requiere permisos de administrador); la configuración y los archivos recientes siguen siendo independientes para cada usuario",
   // v1.0.1 資料分頁
   "拖曳調整側邊欄寬度（雙擊還原）": "Arrastre para cambiar el ancho del panel lateral (doble clic para restablecer)",
   "調整側邊欄寬度": "Cambiar ancho del panel lateral",
-  "視窗的位置、大小與全螢幕狀態會記住，下次開啟時回到同一個螢幕、同樣的位置；側邊欄寬度可以拖曳調整，也會記住": "Se recuerdan la posición, el tamaño y el modo de pantalla completa de la ventana, así que se abre de nuevo en la misma pantalla y en el mismo lugar; el panel lateral se puede redimensionar arrastrando y su ancho también se recuerda",
+  // 白話版「新功能」說明（1.0.1～1.0.3）
+  "安裝時可以選「只給我自己用」或「所有人都能用」（選後者時 Windows 會要求系統管理員確認）": "Al instalar puede elegir «Solo para mí» o «Para todos los usuarios» (con la segunda opción, Windows pedirá confirmación de administrador)",
+  "程式會記住視窗的位置和大小，下次開啟時會出現在同一個螢幕、同樣的位置": "El programa recuerda la posición y el tamaño de la ventana y la abre en la misma pantalla y en el mismo lugar la próxima vez",
+  "右側面板的寬度可以用滑鼠拖曳調整，下次開啟也會記住": "El ancho del panel derecho se puede cambiar arrastrando con el ratón y se recuerda la próxima vez",
+  "資料表換頁更方便：分頁列多了「回到第一頁」「跳到最後一頁」，也可以直接輸入頁碼跳過去": "Cambiar de página es más fácil: la barra de páginas tiene ahora «Ir a la primera página» e «Ir a la última página», y puede escribir un número de página para saltar directamente",
+  "開啟 Excel 或資料庫時，會記住上次看的工作表或資料表，下次直接回到那一個": "Al abrir un archivo de Excel o una base de datos, el programa recuerda la hoja o la tabla que vio por última vez y vuelve directamente a ella",
+  "開啟損壞或被惡意製作的 Excel／CSV 檔時，程式會告訴你無法開啟的原因，不會再當掉": "Si un archivo de Excel o CSV está dañado o ha sido manipulado con mala intención, el programa indica por qué no se puede abrir en lugar de cerrarse",
+  "標籤檔裡如果藏有網路圖片連結，程式會拒絕開啟，不會偷偷連到外面": "Si un archivo de etiqueta contiene un enlace oculto a una imagen de internet, el programa se niega a abrirlo en lugar de conectarse a escondidas con el exterior",
+  "資料很多的資料庫或表格改成一頁一頁顯示（每頁最多 1,000 列），不再卡住；換頁後已勾選的列仍會保留": "Las bases de datos y tablas grandes se muestran ahora página a página (hasta 1.000 filas por página), de modo que el programa ya no se bloquea; las filas marcadas siguen seleccionadas al cambiar de página",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Impresión en hojas de pegatinas / A4…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "Las celdas sobrepasan el papel. Reduzca las columnas o filas, o reduzca los márgenes y separaciones.",

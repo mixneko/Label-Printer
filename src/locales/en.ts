@@ -558,29 +558,30 @@ export const en: Table = {
   "工作表「{name}」的範圍過大（約 {area} 格），為避免程式當掉已拒絕開啟": "The range of sheet {name} is too large (about {area} cells) and was not opened, to keep the program from crashing",
   "不允許存取這種檔案": "Access to this kind of file is not allowed",
   "標籤檔過大，已拒絕開啟": "The label file is too large and was not opened",
-  "強化安全性：開啟惡意構造或過大的 Excel／CSV 檔不再讓程式當掉，會直接拒絕並說明原因": "Security hardening: opening a maliciously crafted or oversized Excel/CSV file no longer crashes the program; it is refused with an explanation",
-  "強化安全性：標籤檔裡的外部圖片網址會被拒絕（避免開啟檔案時偷偷對外連線）；紙張與標籤尺寸限制在 1～1000 mm、間隙最多 100 mm": "Security hardening: external image URLs in label files are refused (so opening a file cannot secretly connect to the internet); paper and label sizes are limited to 1–1000 mm and the gap to 100 mm",
-  "強化安全性：啟用內容安全政策（CSP），並限制程式只能讀寫標籤檔（.lpxl／.json）與匯出的 PDF；自動發布流程使用的工具也改為固定版本": "Security hardening: a Content Security Policy (CSP) is now enabled, and the program can only read and write label files (.lpxl/.json) and exported PDFs; the tools used by the automated release process are now pinned to fixed versions",
   // v1.0.1 資料分頁
   "第 {p} / {n} 頁（共 {total} 列）": "Page {p} / {n} ({total} rows)",
   "第 {p} 頁": "Page {p}",
   "資料庫的資料是一頁一頁讀的，這裡只作用在目前這一頁": "Database data is read one page at a time; this only applies to the current page",
-  "資料庫改為分頁讀取：每頁最多 1,000 列，幾萬筆的資料表也不會讓程式卡住；勾選的列換頁後仍會保留（Excel／CSV 列數很多時同樣分頁顯示）": "Databases are now read page by page: at most 1,000 rows per page, so tables with tens of thousands of rows no longer freeze the program; checked rows are kept when you change pages (long Excel/CSV files are paged too)",
   // v1.0.1 資料分頁
   "第一頁": "First page",
   "最後一頁": "Last page",
   "頁碼": "Page no.",
   "輸入頁碼，按 Enter 跳到該頁": "Type a page number and press Enter to jump to it",
   // v1.0.1 資料分頁
-  "資料表的分頁列新增「|<」第一頁、「>|」最後一頁，並可輸入頁碼直接跳到該頁，資料很多時不必一頁一頁翻": "The page bar of the data table now has |< (first page) and >| (last page), and you can type a page number to jump straight to it, so you no longer have to page through long data one page at a time",
   // v1.0.1 資料分頁
-  "記住上次選的工作表或資料表：下次開同一個 Excel 或資料庫檔案（以及同一個資料庫伺服器）時，直接回到那一個；連線對話框也會記住上次填的自訂查詢": "Remembers the last worksheet or table you picked: the next time you open the same Excel or database file (or the same database server) it goes straight back to it; the connection dialog also remembers the custom query you last entered",
   // v1.0.1 資料分頁
-  "安裝時可以選擇「只給我使用」或「所有人使用」（安裝到 Program Files，需要系統管理員權限）；設定與最近開啟的檔案仍是每位使用者各自一份": "During setup you can now choose “Install just for me” or “Install for all users” (installs to Program Files and needs administrator rights); settings and recent files remain separate for each user",
   // v1.0.1 資料分頁
   "拖曳調整側邊欄寬度（雙擊還原）": "Drag to resize the side panel (double-click to reset)",
   "調整側邊欄寬度": "Resize side panel",
-  "視窗的位置、大小與全螢幕狀態會記住，下次開啟時回到同一個螢幕、同樣的位置；側邊欄寬度可以拖曳調整，也會記住": "The window's position, size and full-screen state are remembered, so it reopens on the same screen in the same place; the side panel can be resized by dragging and its width is remembered too",
+  // 白話版「新功能」說明（1.0.1～1.0.3）
+  "安裝時可以選「只給我自己用」或「所有人都能用」（選後者時 Windows 會要求系統管理員確認）": "During installation you can choose “Only for me” or “For everyone” (with the latter, Windows asks for administrator confirmation)",
+  "程式會記住視窗的位置和大小，下次開啟時會出現在同一個螢幕、同樣的位置": "The program remembers the position and size of its window and opens it on the same screen in the same place next time",
+  "右側面板的寬度可以用滑鼠拖曳調整，下次開啟也會記住": "The width of the right-hand panel can be changed by dragging with the mouse, and it is remembered next time",
+  "資料表換頁更方便：分頁列多了「回到第一頁」「跳到最後一頁」，也可以直接輸入頁碼跳過去": "Paging through data is easier: the page bar now has “Go to first page” and “Go to last page”, and you can type a page number to jump straight to it",
+  "開啟 Excel 或資料庫時，會記住上次看的工作表或資料表，下次直接回到那一個": "When you open an Excel file or a database, the program remembers which sheet or table you looked at last and goes straight back to it",
+  "開啟損壞或被惡意製作的 Excel／CSV 檔時，程式會告訴你無法開啟的原因，不會再當掉": "If an Excel or CSV file is damaged or maliciously crafted, the program now tells you why it cannot be opened instead of crashing",
+  "標籤檔裡如果藏有網路圖片連結，程式會拒絕開啟，不會偷偷連到外面": "If a label file contains a hidden link to an image on the internet, the program refuses to open it instead of quietly connecting to the outside",
+  "資料很多的資料庫或表格改成一頁一頁顯示（每頁最多 1,000 列），不再卡住；換頁後已勾選的列仍會保留": "Large databases and tables are now shown one page at a time (up to 1,000 rows per page), so the program no longer freezes; rows you have ticked stay selected when you change pages",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Sticker sheet / A4 layout print…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "The cells extend beyond the paper. Reduce the columns or rows, or reduce the margins and gaps.",

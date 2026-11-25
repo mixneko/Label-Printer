@@ -559,29 +559,30 @@ export const de: Table = {
   "工作表「{name}」的範圍過大（約 {area} 格），為避免程式當掉已拒絕開啟": "Der Bereich des Blatts {name} ist zu groß (etwa {area} Zellen) und wurde nicht geöffnet, damit das Programm nicht abstürzt",
   "不允許存取這種檔案": "Der Zugriff auf diese Dateiart ist nicht erlaubt",
   "標籤檔過大，已拒絕開啟": "Die Etikettendatei ist zu groß und wurde nicht geöffnet",
-  "強化安全性：開啟惡意構造或過大的 Excel／CSV 檔不再讓程式當掉，會直接拒絕並說明原因": "Mehr Sicherheit: Das Öffnen einer manipulierten oder zu großen Excel-/CSV-Datei bringt das Programm nicht mehr zum Absturz; sie wird mit einer Erklärung abgelehnt",
-  "強化安全性：標籤檔裡的外部圖片網址會被拒絕（避免開啟檔案時偷偷對外連線）；紙張與標籤尺寸限制在 1～1000 mm、間隙最多 100 mm": "Mehr Sicherheit: Externe Bild-URLs in Etikettendateien werden abgelehnt (das Öffnen einer Datei kann sich also nicht heimlich mit dem Internet verbinden); Papier- und Etikettengröße sind auf 1–1000 mm, der Abstand auf 100 mm begrenzt",
-  "強化安全性：啟用內容安全政策（CSP），並限制程式只能讀寫標籤檔（.lpxl／.json）與匯出的 PDF；自動發布流程使用的工具也改為固定版本": "Mehr Sicherheit: Eine Content Security Policy (CSP) ist aktiviert, und das Programm darf nur Etikettendateien (.lpxl/.json) und exportierte PDFs lesen und schreiben; die Werkzeuge des automatischen Release-Prozesses sind auf feste Versionen festgelegt",
   // v1.0.1 資料分頁
   "第 {p} / {n} 頁（共 {total} 列）": "Seite {p} / {n} ({total} Zeilen)",
   "第 {p} 頁": "Seite {p}",
   "資料庫的資料是一頁一頁讀的，這裡只作用在目前這一頁": "Datenbankdaten werden seitenweise gelesen; dies gilt nur für die aktuelle Seite",
-  "資料庫改為分頁讀取：每頁最多 1,000 列，幾萬筆的資料表也不會讓程式卡住；勾選的列換頁後仍會保留（Excel／CSV 列數很多時同樣分頁顯示）": "Datenbanken werden jetzt seitenweise gelesen: höchstens 1.000 Zeilen pro Seite, sodass Tabellen mit zehntausenden Zeilen das Programm nicht mehr einfrieren; markierte Zeilen bleiben beim Seitenwechsel erhalten (lange Excel-/CSV-Dateien werden ebenfalls seitenweise angezeigt)",
   // v1.0.1 資料分頁
   "第一頁": "Erste Seite",
   "最後一頁": "Letzte Seite",
   "頁碼": "Seitennr.",
   "輸入頁碼，按 Enter 跳到該頁": "Seitenzahl eingeben und mit Enter zur Seite springen",
   // v1.0.1 資料分頁
-  "資料表的分頁列新增「|<」第一頁、「>|」最後一頁，並可輸入頁碼直接跳到該頁，資料很多時不必一頁一頁翻": "Die Seitenleiste der Datentabelle hat jetzt |< (erste Seite) und >| (letzte Seite); außerdem können Sie eine Seitenzahl eingeben und direkt dorthin springen, sodass Sie bei vielen Daten nicht mehr Seite für Seite blättern müssen",
   // v1.0.1 資料分頁
-  "記住上次選的工作表或資料表：下次開同一個 Excel 或資料庫檔案（以及同一個資料庫伺服器）時，直接回到那一個；連線對話框也會記住上次填的自訂查詢": "Merkt sich das zuletzt gewählte Arbeitsblatt bzw. die Tabelle: Beim nächsten Öffnen derselben Excel- oder Datenbankdatei (oder desselben Datenbankservers) geht es direkt dorthin zurück; der Verbindungsdialog merkt sich außerdem die zuletzt eingegebene eigene Abfrage",
   // v1.0.1 資料分頁
-  "安裝時可以選擇「只給我使用」或「所有人使用」（安裝到 Program Files，需要系統管理員權限）；設定與最近開啟的檔案仍是每位使用者各自一份": "Bei der Installation können Sie jetzt „Nur für mich“ oder „Für alle Benutzer“ wählen (Installation in Program Files, Administratorrechte erforderlich); Einstellungen und zuletzt geöffnete Dateien bleiben für jeden Benutzer getrennt",
   // v1.0.1 資料分頁
   "拖曳調整側邊欄寬度（雙擊還原）": "Ziehen, um die Breite der Seitenleiste zu ändern (Doppelklick setzt zurück)",
   "調整側邊欄寬度": "Seitenleiste in der Breite ändern",
-  "視窗的位置、大小與全螢幕狀態會記住，下次開啟時回到同一個螢幕、同樣的位置；側邊欄寬度可以拖曳調整，也會記住": "Position, Größe und Vollbildstatus des Fensters werden gespeichert, sodass es beim nächsten Start auf demselben Bildschirm an derselben Stelle erscheint; die Seitenleiste lässt sich per Ziehen in der Breite ändern und wird ebenfalls gespeichert",
+  // 白話版「新功能」說明（1.0.1～1.0.3）
+  "安裝時可以選「只給我自己用」或「所有人都能用」（選後者時 Windows 會要求系統管理員確認）": "Bei der Installation können Sie „Nur für mich“ oder „Für alle Benutzer“ wählen (bei Letzterem fragt Windows nach der Bestätigung durch einen Administrator)",
+  "程式會記住視窗的位置和大小，下次開啟時會出現在同一個螢幕、同樣的位置": "Das Programm merkt sich Position und Größe des Fensters und öffnet es beim nächsten Mal auf demselben Bildschirm an derselben Stelle",
+  "右側面板的寬度可以用滑鼠拖曳調整，下次開啟也會記住": "Die Breite des rechten Bereichs lässt sich mit der Maus ziehen und wird für das nächste Mal gespeichert",
+  "資料表換頁更方便：分頁列多了「回到第一頁」「跳到最後一頁」，也可以直接輸入頁碼跳過去": "Blättern ist jetzt einfacher: Die Seitenleiste hat „Zur ersten Seite“ und „Zur letzten Seite“, und Sie können eine Seitenzahl eingeben, um direkt dorthin zu springen",
+  "開啟 Excel 或資料庫時，會記住上次看的工作表或資料表，下次直接回到那一個": "Beim Öffnen einer Excel-Datei oder Datenbank merkt sich das Programm das zuletzt angesehene Blatt bzw. die zuletzt angesehene Tabelle und kehrt direkt dorthin zurück",
+  "開啟損壞或被惡意製作的 Excel／CSV 檔時，程式會告訴你無法開啟的原因，不會再當掉": "Ist eine Excel- oder CSV-Datei beschädigt oder bösartig präpariert, nennt das Programm jetzt den Grund, warum sie sich nicht öffnen lässt, statt abzustürzen",
+  "標籤檔裡如果藏有網路圖片連結，程式會拒絕開啟，不會偷偷連到外面": "Enthält eine Etikettendatei einen versteckten Link zu einem Bild im Internet, öffnet das Programm sie nicht, statt heimlich eine Verbindung nach außen aufzubauen",
+  "資料很多的資料庫或表格改成一頁一頁顯示（每頁最多 1,000 列），不再卡住；換頁後已勾選的列仍會保留": "Große Datenbanken und Tabellen werden jetzt seitenweise angezeigt (bis zu 1.000 Zeilen pro Seite), sodass das Programm nicht mehr hängt; angekreuzte Zeilen bleiben beim Seitenwechsel ausgewählt",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Etikettenbogen / A4-Layout drucken…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "Die Felder ragen über das Papier hinaus. Verringern Sie die Spalten oder Zeilen oder die Ränder und Abstände.",

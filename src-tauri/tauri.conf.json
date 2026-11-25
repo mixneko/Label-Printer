@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Label Printer",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "identifier": "tw.b51.labelprinter",
   "mainBinaryName": "Label Printer",
   "build": {
@@ -12,7 +12,7 @@
   },
   "app": {
     "windows": [
-      { "title": "Label Printer", "width": 1280, "height": 800, "minWidth": 900, "minHeight": 600 }
+      { "title": "Label Printer", "width": 1280, "height": 800, "minWidth": 900, "minHeight": 600, "visible": false }
     ],
     "security": {
       "csp": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'",
@@ -35,7 +35,7 @@
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
     "windows": {
       "webviewInstallMode": { "type": "embedBootstrapper" },
-      "nsis": { "installMode": "currentUser", "languages": ["TradChinese", "SimpChinese", "English", "Spanish", "German", "Japanese", "Korean"], "displayLanguageSelector": true }
+      "nsis": { "installMode": "both", "languages": ["TradChinese", "SimpChinese", "English", "Spanish", "German", "Japanese", "Korean"], "displayLanguageSelector": true }
     }
   }
 }

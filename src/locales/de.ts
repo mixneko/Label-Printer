@@ -576,6 +576,12 @@ export const de: Table = {
   "資料表的分頁列新增「|<」第一頁、「>|」最後一頁，並可輸入頁碼直接跳到該頁，資料很多時不必一頁一頁翻": "Die Seitenleiste der Datentabelle hat jetzt |< (erste Seite) und >| (letzte Seite); außerdem können Sie eine Seitenzahl eingeben und direkt dorthin springen, sodass Sie bei vielen Daten nicht mehr Seite für Seite blättern müssen",
   // v1.0.1 資料分頁
   "記住上次選的工作表或資料表：下次開同一個 Excel 或資料庫檔案（以及同一個資料庫伺服器）時，直接回到那一個；連線對話框也會記住上次填的自訂查詢": "Merkt sich das zuletzt gewählte Arbeitsblatt bzw. die Tabelle: Beim nächsten Öffnen derselben Excel- oder Datenbankdatei (oder desselben Datenbankservers) geht es direkt dorthin zurück; der Verbindungsdialog merkt sich außerdem die zuletzt eingegebene eigene Abfrage",
+  // v1.0.1 資料分頁
+  "安裝時可以選擇「只給我使用」或「所有人使用」（安裝到 Program Files，需要系統管理員權限）；設定與最近開啟的檔案仍是每位使用者各自一份": "Bei der Installation können Sie jetzt „Nur für mich“ oder „Für alle Benutzer“ wählen (Installation in Program Files, Administratorrechte erforderlich); Einstellungen und zuletzt geöffnete Dateien bleiben für jeden Benutzer getrennt",
+  // v1.0.1 資料分頁
+  "拖曳調整側邊欄寬度（雙擊還原）": "Ziehen, um die Breite der Seitenleiste zu ändern (Doppelklick setzt zurück)",
+  "調整側邊欄寬度": "Seitenleiste in der Breite ändern",
+  "視窗的位置、大小與全螢幕狀態會記住，下次開啟時回到同一個螢幕、同樣的位置；側邊欄寬度可以拖曳調整，也會記住": "Position, Größe und Vollbildstatus des Fensters werden gespeichert, sodass es beim nächsten Start auf demselben Bildschirm an derselben Stelle erscheint; die Seitenleiste lässt sich per Ziehen in der Breite ändern und wird ebenfalls gespeichert",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Etikettenbogen / A4-Layout drucken…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "Die Felder ragen über das Papier hinaus. Verringern Sie die Spalten oder Zeilen oder die Ränder und Abstände.",

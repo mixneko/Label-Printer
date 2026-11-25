@@ -199,7 +199,13 @@ label.check { display: flex; align-items: center; gap: 6px; margin-top: 22px; co
 .caption { padding: 2px 10px; font-size: 12px; color: var(--muted); background: color-mix(in srgb, var(--surface) 80%, transparent); border-radius: 999px; }
 
 /* ===== 側邊面板 ===== */
-.panel { width: 320px; flex: none; overflow-y: auto; padding: 12px; background: var(--surface-2); border-left: 1px solid var(--border); }
+/* 寬度調整把手：DOM 在面板後面，靠 order 排到畫布與面板之間；面板隱藏時一起隱藏 */
+.vresizer { order: 1; flex: none; display: flex; align-items: center; justify-content: center; width: 9px; margin: 0 -5px 0 -4px; position: relative; z-index: 4; cursor: ew-resize; touch-action: none; }
+.vresizer::after { content: ""; width: 3px; height: 48px; border-radius: 2px; background: var(--border-strong); transition: background .12s; }
+.vresizer:hover::after, .vresizer:focus-visible::after { background: var(--accent); }
+.vresizer:focus-visible { outline: none; }
+.panel[hidden] + .vresizer { display: none; }
+.panel { order: 2; width: 320px; flex: none; overflow-y: auto; padding: 12px; background: var(--surface-2); border-left: 1px solid var(--border); }
 .card { margin-bottom: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
 .card > summary {
   display: flex; align-items: center; gap: 6px; padding: 9px 12px; list-style: none; cursor: pointer; user-select: none;

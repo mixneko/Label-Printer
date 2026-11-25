@@ -35,6 +35,7 @@ import { clampSize, DOTS_PER_MM, loadSettings, type SizeSettingKey, mmToDots, PR
 import { placeholdersOf, substitute, type Placeholder, type Raw, type RawRow, type Row } from "./template";
 import { renderFormatList } from "./fieldformat";
 import { initFontCombo } from "./fontcombo";
+import { initPanelResizer } from "./panelsize";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const settings: Settings = loadSettings();
@@ -1648,6 +1649,7 @@ $<HTMLInputElement>("image-file").addEventListener("change", (e) => {
 $("delete").addEventListener("click", removeSelected);
 $("print").addEventListener("click", print);
 $("preview-btn").addEventListener("click", () => void previewBitmap());
+initPanelResizer();
 initTable({
   onPreview: previewBitmap, onPrint: printRows, onInsertVar: insertVariable, onStatus: setStatus, onChange: refreshVarSelect,
   onPrintPreview: () => previewAction(),

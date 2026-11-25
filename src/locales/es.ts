@@ -576,6 +576,12 @@ export const es: Table = {
   "資料表的分頁列新增「|<」第一頁、「>|」最後一頁，並可輸入頁碼直接跳到該頁，資料很多時不必一頁一頁翻": "La barra de páginas de la tabla de datos ahora tiene |< (primera página) y >| (última página), y puede escribir un número de página para ir directamente a ella, así que ya no tiene que pasar página por página cuando hay muchos datos",
   // v1.0.1 資料分頁
   "記住上次選的工作表或資料表：下次開同一個 Excel 或資料庫檔案（以及同一個資料庫伺服器）時，直接回到那一個；連線對話框也會記住上次填的自訂查詢": "Recuerda la última hoja o tabla elegida: la próxima vez que abra el mismo archivo de Excel o de base de datos (o el mismo servidor) volverá directamente a ella; el cuadro de conexión también recuerda la última consulta personalizada",
+  // v1.0.1 資料分頁
+  "安裝時可以選擇「只給我使用」或「所有人使用」（安裝到 Program Files，需要系統管理員權限）；設定與最近開啟的檔案仍是每位使用者各自一份": "Durante la instalación ahora puede elegir «Solo para mí» o «Para todos los usuarios» (se instala en Program Files y requiere permisos de administrador); la configuración y los archivos recientes siguen siendo independientes para cada usuario",
+  // v1.0.1 資料分頁
+  "拖曳調整側邊欄寬度（雙擊還原）": "Arrastre para cambiar el ancho del panel lateral (doble clic para restablecer)",
+  "調整側邊欄寬度": "Cambiar ancho del panel lateral",
+  "視窗的位置、大小與全螢幕狀態會記住，下次開啟時回到同一個螢幕、同樣的位置；側邊欄寬度可以拖曳調整，也會記住": "Se recuerdan la posición, el tamaño y el modo de pantalla completa de la ventana, así que se abre de nuevo en la misma pantalla y en el mismo lugar; el panel lateral se puede redimensionar arrastrando y su ancho también se recuerda",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Impresión en hojas de pegatinas / A4…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "Las celdas sobrepasan el papel. Reduzca las columnas o filas, o reduzca los márgenes y separaciones.",

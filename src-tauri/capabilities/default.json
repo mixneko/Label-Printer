@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "主視窗預設權限",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-destroy", "dialog:default", "updater:default"]
+  "permissions": ["core:default", "core:window:allow-destroy", "dialog:default", "updater:default", "window-state:default"]
 }

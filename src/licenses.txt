@@ -1,6 +1,6 @@
 Label Printer 第三方授權聲明
 本程式使用下列開放原始碼套件。各套件的版權屬於其作者，依其授權條款散布。
-（共 408 個；由 scripts/gen-licenses.mjs 自動產生，內容為執行時期會打包進程式的套件。）
+（共 409 個；由 scripts/gen-licenses.mjs 自動產生，內容為執行時期會打包進程式的套件。）
 
 附註：rusqlite／libsqlite3-sys 內含 SQLite 的 C 原始碼（用於讀取 SQLite 資料庫）。SQLite 屬於公有領域（Public Domain），無版權與授權限制，詳見 https://www.sqlite.org/copyright.html 。
 
@@ -1539,6 +1539,11 @@ tauri-plugin-fs 2.7.1  [Rust]
   授權全文：見下方 #174
 
 tauri-plugin-updater 2.14.1  [Rust]
+  授權：Apache-2.0 OR MIT
+  來源：https://github.com/tauri-apps/plugins-workspace
+  授權全文：見下方 #174
+
+tauri-plugin-window-state 2.5.0  [Rust]
   授權：Apache-2.0 OR MIT
   來源：https://github.com/tauri-apps/plugins-workspace
   授權全文：見下方 #174
@@ -30385,7 +30390,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
----------- #174（tauri-plugin-dialog、tauri-plugin-fs、tauri-plugin-updater）----------
+---------- #174（tauri-plugin-dialog、tauri-plugin-fs、tauri-plugin-updater、tauri-plugin-window-state）----------
 
 SPDXVersion: SPDX-2.1
 DataLicense: CC0-1.0

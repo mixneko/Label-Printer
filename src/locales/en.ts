@@ -575,6 +575,12 @@ export const en: Table = {
   "資料表的分頁列新增「|<」第一頁、「>|」最後一頁，並可輸入頁碼直接跳到該頁，資料很多時不必一頁一頁翻": "The page bar of the data table now has |< (first page) and >| (last page), and you can type a page number to jump straight to it, so you no longer have to page through long data one page at a time",
   // v1.0.1 資料分頁
   "記住上次選的工作表或資料表：下次開同一個 Excel 或資料庫檔案（以及同一個資料庫伺服器）時，直接回到那一個；連線對話框也會記住上次填的自訂查詢": "Remembers the last worksheet or table you picked: the next time you open the same Excel or database file (or the same database server) it goes straight back to it; the connection dialog also remembers the custom query you last entered",
+  // v1.0.1 資料分頁
+  "安裝時可以選擇「只給我使用」或「所有人使用」（安裝到 Program Files，需要系統管理員權限）；設定與最近開啟的檔案仍是每位使用者各自一份": "During setup you can now choose “Install just for me” or “Install for all users” (installs to Program Files and needs administrator rights); settings and recent files remain separate for each user",
+  // v1.0.1 資料分頁
+  "拖曳調整側邊欄寬度（雙擊還原）": "Drag to resize the side panel (double-click to reset)",
+  "調整側邊欄寬度": "Resize side panel",
+  "視窗的位置、大小與全螢幕狀態會記住，下次開啟時回到同一個螢幕、同樣的位置；側邊欄寬度可以拖曳調整，也會記住": "The window's position, size and full-screen state are remembered, so it reopens on the same screen in the same place; the side panel can be resized by dragging and its width is remembered too",
   // v1.0 貼紙紙／A4 排版
   "貼紙紙／A4 排版列印…": "Sticker sheet / A4 layout print…",
   "格子超出了紙張範圍，請減少欄數或列數，或縮小邊界與間距。": "The cells extend beyond the paper. Reduce the columns or rows, or reduce the margins and gaps.",

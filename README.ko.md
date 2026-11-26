@@ -1,6 +1,6 @@
 # Label Printer
 
-[繁體中文](README.md) · [English](README.en.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · **한국어**
+[English](README.md) · [繁體中文](README.zh-TW.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · **한국어**
 
 <p align="center"><img src="docs/images/ko/editor.png" alt="Label Printer" width="860"></p>
 

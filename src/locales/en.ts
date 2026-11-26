@@ -573,6 +573,22 @@ export const en: Table = {
   // v1.0.1 資料分頁
   "拖曳調整側邊欄寬度（雙擊還原）": "Drag to resize the side panel (double-click to reset)",
   "調整側邊欄寬度": "Resize side panel",
+  // 請作者喝杯啤酒（1.0.4）
+  "請作者喝杯啤酒": "Buy the author a beer",
+  "會用瀏覽器開啟 Ko-fi 贊助網頁": "Opens the Ko-fi support page in your browser",
+  "剛剛送出了 {total} 張標籤。": "{total} labels were just sent.",
+  "如果 Label Printer 幫上了忙，歡迎請作者喝杯啤酒。贊助完全自由，所有功能都一樣可以使用。": "If Label Printer helped you, you are welcome to buy the author a beer. Supporting is entirely optional; every feature works the same either way.",
+  "「說明 → 關於」新增「請作者喝杯啤酒」按鈕，按下會用瀏覽器開啟贊助網頁": "“Help → About” has a new “Buy the author a beer” button that opens the support page in your browser",
+  "一次列印 15 張以上標籤後，會出現一個可以直接關掉的小視窗": "After printing 15 or more labels at once, a small window appears that you can simply close",
+  "「請作者喝杯啤酒」的小視窗改成一天最多出現一次": "The “Buy the author a beer” window now appears at most once a day",
+  "用 A4／貼紙紙排版列印時，如果在 Windows 的列印視窗按「取消」，不會再出現那個小視窗": "When printing an A4 / sticker sheet layout, the window no longer appears if you press “Cancel” in the Windows print dialog",
+  "常見尺寸": "Common sizes",
+  "自訂": "Custom",
+  "一般標籤": "General labels",
+  "地址條": "Address labels",
+  "寄件／出貨": "Shipping",
+  "（4 × 6 吋）": "(4 × 6 in)",
+  "新增標籤時可以直接從「常見尺寸」挑選，包含地址條與寄件／出貨標籤": "When creating a new label you can pick from “Common sizes”, including address and shipping labels",
   // 白話版「新功能」說明（1.0.1～1.0.3）
   "安裝時可以選「只給我自己用」或「所有人都能用」（選後者時 Windows 會要求系統管理員確認）": "During installation you can choose “Only for me” or “For everyone” (with the latter, Windows asks for administrator confirmation)",
   "程式會記住視窗的位置和大小，下次開啟時會出現在同一個螢幕、同樣的位置": "The program remembers the position and size of its window and opens it on the same screen in the same place next time",

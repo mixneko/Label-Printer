@@ -574,6 +574,22 @@ export const es: Table = {
   // v1.0.1 資料分頁
   "拖曳調整側邊欄寬度（雙擊還原）": "Arrastre para cambiar el ancho del panel lateral (doble clic para restablecer)",
   "調整側邊欄寬度": "Cambiar ancho del panel lateral",
+  // 請作者喝杯啤酒（1.0.4）
+  "請作者喝杯啤酒": "Invita al autor a una cerveza",
+  "會用瀏覽器開啟 Ko-fi 贊助網頁": "Abre la página de apoyo en Ko-fi en el navegador",
+  "剛剛送出了 {total} 張標籤。": "Se acaban de enviar {total} etiquetas.",
+  "如果 Label Printer 幫上了忙，歡迎請作者喝杯啤酒。贊助完全自由，所有功能都一樣可以使用。": "Si Label Printer le ha sido útil, puede invitar al autor a una cerveza. El apoyo es totalmente voluntario; todas las funciones siguen disponibles igual.",
+  "「說明 → 關於」新增「請作者喝杯啤酒」按鈕，按下會用瀏覽器開啟贊助網頁": "«Ayuda → Acerca de» incluye el nuevo botón «Invita al autor a una cerveza», que abre la página de apoyo en el navegador",
+  "一次列印 15 張以上標籤後，會出現一個可以直接關掉的小視窗": "Después de imprimir 15 etiquetas o más de una vez, aparece una pequeña ventana que puede cerrar sin más",
+  "「請作者喝杯啤酒」的小視窗改成一天最多出現一次": "La ventana «Invita al autor a una cerveza» aparece ahora como máximo una vez al día",
+  "用 A4／貼紙紙排版列印時，如果在 Windows 的列印視窗按「取消」，不會再出現那個小視窗": "Al imprimir una composición en A4 o en hojas de pegatinas, la ventana ya no aparece si pulsa «Cancelar» en el cuadro de impresión de Windows",
+  "常見尺寸": "Tamaños habituales",
+  "自訂": "Personalizado",
+  "一般標籤": "Etiquetas generales",
+  "地址條": "Etiquetas de dirección",
+  "寄件／出貨": "Envíos",
+  "（4 × 6 吋）": "(4 × 6 pulg.)",
+  "新增標籤時可以直接從「常見尺寸」挑選，包含地址條與寄件／出貨標籤": "Al crear una etiqueta nueva puede elegir entre los «Tamaños habituales», incluidas las de dirección y de envío",
   // 白話版「新功能」說明（1.0.1～1.0.3）
   "安裝時可以選「只給我自己用」或「所有人都能用」（選後者時 Windows 會要求系統管理員確認）": "Al instalar puede elegir «Solo para mí» o «Para todos los usuarios» (con la segunda opción, Windows pedirá confirmación de administrador)",
   "程式會記住視窗的位置和大小，下次開啟時會出現在同一個螢幕、同樣的位置": "El programa recuerda la posición y el tamaño de la ventana y la abre en la misma pantalla y en el mismo lugar la próxima vez",

@@ -1,6 +1,8 @@
 // 貼紙紙／A4 排版列印的對話框：設定版面、預覽整頁、匯出 PDF、經 Windows 列印對話框直接列印。
 // 實驗性質：沒有在真實的 A4 印表機與貼紙紙上驗證過。
 
+import { beerDue, maybeAskBeer } from "./donate";
+import { invoke } from "./ipc";
 import {
   autoFit, buildPdf, canvasToFlateRgb, computeLayout, drawPage, loadSheet, pageSize, planPages, sanitize, saveSheet,
   type PdfPage, type SheetConfig,
@@ -195,11 +197,15 @@ async function printSheets(): Promise<void> {
     let style = document.getElementById("sheet-page-style");
     if (!style) { style = document.createElement("style"); style.id = "sheet-page-style"; document.head.append(style); }
     style.textContent = `@page { size: ${ps.w}mm ${ps.h}mm; margin: 0; }`;
+    const count = recs.length;
+    // 列印視窗不會回報按了「列印」還是「取消」，改看列印佇列有沒有新工作；監看不了就不顯示
+    const watching = beerDue(count) && (await invoke<boolean>("watch_print_jobs").catch(() => false));
     const done = () => {
       window.removeEventListener("afterprint", done);
       document.body.classList.remove("printing-sheet");
       host.replaceChildren();
       for (const u of urls) URL.revokeObjectURL(u);
+      if (watching) void invoke<boolean>("print_job_added").then((added) => { if (added) maybeAskBeer(count); }).catch(() => { /* 查不到就不顯示 */ });
     };
     window.addEventListener("afterprint", done);
     document.body.classList.add("printing-sheet");

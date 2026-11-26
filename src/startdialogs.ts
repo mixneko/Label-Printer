@@ -42,11 +42,51 @@ export function buildSizeFields(): void {
   }
 }
 
+/** 常見的標籤尺寸（寬 × 高，mm）。選了之後紙張＝標籤大小、間隙 2 mm，欄位仍可自己改 */
+const PRESETS: Array<{ group: string; sizes: Array<[number, number]> }> = [
+  { group: N("一般標籤"), sizes: [[40, 30], [50, 30], [60, 30], [60, 40], [100, 50]] },
+  { group: N("地址條"), sizes: [[89, 28], [89, 36]] },
+  { group: N("寄件／出貨"), sizes: [[100, 100], [100, 150], [101.6, 152.4]] },
+];
+const PRESET_GAP_MM = 2;
+const field = (key: SizeKey) => $<HTMLInputElement>("new-" + SIZE_FIELDS.find((f) => f.key === key)!.id);
+
+/** 每次開啟都重建選項（切換語言後文字才會跟著換） */
+function buildPresets(): void {
+  const select = $<HTMLSelectElement>("new-preset");
+  select.replaceChildren(new Option(tr("自訂"), ""));
+  for (const { group, sizes } of PRESETS) {
+    const box = document.createElement("optgroup");
+    box.label = tr(group);
+    for (const [w, h] of sizes) {
+      const inch = w === 101.6 ? `　${tr("（4 × 6 吋）")}` : "";
+      box.append(new Option(`${w} × ${h} mm${inch}`, `${w}x${h}`));
+    }
+    select.append(box);
+  }
+  select.onchange = () => {
+    if (!select.value) return;
+    const [w, h] = select.value.split("x").map(Number);
+    const values: Record<SizeKey, number> = { paperWmm: w, paperHmm: h, tplWmm: w, tplHmm: h, gapMm: PRESET_GAP_MM };
+    for (const f of SIZE_FIELDS) field(f.key).value = String(values[f.key]);
+  };
+  for (const f of SIZE_FIELDS) field(f.key).oninput = syncPreset;
+  syncPreset();
+}
+
+/** 下拉選單跟著標籤寬高走：剛好是常見尺寸就選它，否則顯示「自訂」 */
+function syncPreset(): void {
+  const select = $<HTMLSelectElement>("new-preset");
+  const value = `${Number(field("tplWmm").value)}x${Number(field("tplHmm").value)}`;
+  select.value = [...select.options].some((o) => o.value === value) ? value : "";
+}
+
 /** 新增標籤時詢問紙張與標籤尺寸（像繪圖軟體的「新增文件」）；回傳 false 表示取消 */
 const NEW_FIELDS: Array<[string, SizeKey]> = SIZE_FIELDS.map((f) => ["new-" + f.id, f.key]);
 export function askNewSize(): Promise<boolean> {
   const dlg = $<HTMLDialogElement>("dlg-new");
   for (const [id, key] of NEW_FIELDS) $<HTMLInputElement>(id).value = String(deps.settings[key]);
+  buildPresets();
   return new Promise((resolve) => {
     let ok = false;
     const done = () => { dlg.removeEventListener("close", done); resolve(ok); };

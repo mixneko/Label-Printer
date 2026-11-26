@@ -404,6 +404,7 @@
       <header class="dlg-head"><h2>新增標籤</h2></header>
       <div class="dlg-body">
         <p class="hint">請先決定紙張與標籤的大小（mm）。之後隨時可以在畫布空白處按右鍵 →「屬性」修改。</p>
+        <label>常見尺寸 <select id="new-preset"></select></label>
         <div class="grid" data-size-fields="new-"></div>
       </div>
       <footer class="dlg-foot"><span class="spacer"></span><button type="button" class="btn" id="new-cancel">取消</button><button type="button" class="btn primary" id="new-ok">建立</button></footer>
@@ -495,6 +496,7 @@
       <div class="dlg-body">
         <p class="close-msg">輕量的標籤排版與列印軟體，支援 TSPL、ZPL 等多種標籤機語言。<br /><span id="about-ver"></span></p>
         <p class="close-msg">本程式使用多個開放原始碼套件（Tauri、Konva、QRCode、JsBarcode、calamine 等），各套件依其授權條款散布。</p>
+        <div class="beer-row"><button id="about-beer" type="button" class="btn beer" title="會用瀏覽器開啟 Ko-fi 贊助網頁"><img src="/beer.svg" alt="" /><span>請作者喝杯啤酒</span></button></div>
       </div>
       <footer class="dlg-foot">
         <button id="about-licenses" type="button" class="btn">第三方授權聲明…</button>
@@ -518,6 +520,21 @@
       <footer class="dlg-foot">
         <span class="spacer"></span>
         <button id="whatsnew-close" type="button" class="btn primary">關閉</button>
+      </footer>
+    </dialog>
+    <!-- 一次列印 15 張以上後出現的小視窗 -->
+    <dialog id="beer-dialog" class="dialog beer-dlg">
+      <img class="beer-banner" src="/beer-banner.svg" alt="" />
+      <button id="beer-x" type="button" class="beer-x" title="關閉" aria-label="關閉">×</button>
+      <div class="dlg-body">
+        <h2>請作者喝杯啤酒</h2>
+        <p id="beer-msg" class="close-msg"></p>
+        <p class="close-msg">如果 Label Printer 幫上了忙，歡迎請作者喝杯啤酒。贊助完全自由，所有功能都一樣可以使用。</p>
+      </div>
+      <footer class="dlg-foot">
+        <span class="spacer"></span>
+        <button id="beer-close" type="button" class="btn" autofocus>關閉</button>
+        <button id="beer-go" type="button" class="btn beer" title="會用瀏覽器開啟 Ko-fi 贊助網頁"><img src="/beer.svg" alt="" /><span>請作者喝杯啤酒</span></button>
       </footer>
     </dialog>
     <dialog id="lic-dialog" class="dialog lic-dlg">

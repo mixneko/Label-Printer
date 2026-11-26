@@ -414,6 +414,17 @@ details.help code { padding: 0 4px; background: color-mix(in srgb, var(--help-bo
 .btn.danger-solid:hover:not(:disabled) { filter: brightness(.92); }
 .btn.danger-solid:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
 
+/* ===== 請作者喝杯啤酒 ===== */
+.btn.beer { color: #4a2a05; background: linear-gradient(#ffd66b, #f7b32b); border-color: #c9820f; font-weight: 600; }
+.btn.beer:hover:not(:disabled) { background: linear-gradient(#ffe08a, #ffc13d); border-color: #c9820f; }
+.btn.beer img { width: 20px; height: 20px; }
+.beer-row { display: flex; justify-content: center; margin: 4px 0; }
+.dialog.beer-dlg { width: min(440px, calc(100vw - 32px)); overflow: hidden; }
+.beer-banner { display: block; width: 100%; height: auto; }
+.beer-x { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; padding: 0; font-size: 18px; line-height: 1; color: #4a2a05; background: rgba(255, 255, 255, .7); border: 0; border-radius: 999px; cursor: pointer; }
+.beer-x:hover { background: #fff; }
+.beer-dlg h2 { margin: 10px 0 6px; font-size: 17px; }
+
 /* ===== 說明：授權聲明 ===== */
 .dialog.lic-dlg { width: min(860px, calc(100vw - 32px)); height: min(640px, calc(100vh - 32px)); }
 .lic-text { margin: 0; font: 12px/1.5 Consolas, "Cascadia Mono", monospace; white-space: pre-wrap; word-break: break-word; user-select: text; }

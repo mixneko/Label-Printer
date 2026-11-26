@@ -5,12 +5,36 @@ mod langs;
 mod netdb;
 mod numfmt;
 mod printer;
+#[cfg(windows)]
+mod printwatch;
 mod sheet;
 mod spool;
 mod tspl;
 
 use printer::PrinterTarget;
 use tspl::PrintJob;
+
+/// 開系統列印視窗之前呼叫：開始監看列印佇列。回傳 false 代表監看不了。
+#[cfg(windows)]
+#[tauri::command]
+async fn watch_print_jobs(state: tauri::State<'_, printwatch::PrintWatchState>) -> Result<bool, String> {
+    let watch = tauri::async_runtime::spawn_blocking(printwatch::PrintWatch::start).await.map_err(|e| e.to_string())?;
+    let ok = watch.is_some();
+    *state.0.lock().map_err(|e| e.to_string())? = watch;
+    Ok(ok)
+}
+
+/// 列印視窗關閉後呼叫：監看期間有沒有新的列印工作（按了「取消」就不會有）。最多等 60 秒。
+#[cfg(windows)]
+#[tauri::command]
+async fn print_job_added(state: tauri::State<'_, printwatch::PrintWatchState>) -> Result<bool, String> {
+    let Some(watch) = state.0.lock().map_err(|e| e.to_string())?.take() else {
+        return Ok(false);
+    };
+    tauri::async_runtime::spawn_blocking(move || watch.job_added(std::time::Duration::from_secs(60)))
+        .await
+        .map_err(|e| e.to_string())
+}
 
 /// 前端傳來已渲染好的 1-bit 點陣（可多張），這裡組成 TSPL 並以單一列印工作送到印表機。
 #[tauri::command]
@@ -100,10 +124,14 @@ fn startup_file() -> Option<String> {
     pick_startup_file(std::env::args().skip(1))
 }
 
-/// 用預設瀏覽器開啟「檢查新版本」找到的下載頁面。只允許本專案的 GitHub 網址，避免被拿去開任意連結。
+/// 用預設瀏覽器開啟「檢查新版本」找到的下載頁面。只允許本專案的 GitHub 網址與作者的贊助頁，避免被拿去開任意連結。
 const OPEN_URL_PREFIX: &str = "https://github.com/mixneko/Label-Printer";
 
 fn url_allowed(url: &str) -> bool {
+    // 作者的贊助頁（前端 `donate.ts` 的 `DONATE_URL`），必須完全相同
+    if url == "https://ko-fi.com/mixneko" {
+        return true;
+    }
     url.starts_with(OPEN_URL_PREFIX)
         && matches!(url.as_bytes().get(OPEN_URL_PREFIX.len()), None | Some(b'/') | Some(b'?') | Some(b'#'))
         && url.chars().all(|c| c.is_ascii_graphic())
@@ -197,8 +225,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .manage(printwatch::PrintWatchState::default())
         .invoke_handler(tauri::generate_handler![
             print_labels,
+            watch_print_jobs,
+            print_job_added,
             open_url,
             list_printers,
             detect_printer_language,
@@ -236,6 +267,9 @@ mod tests {
     #[test]
     fn open_url_only_allows_the_project_repo() {
         assert!(url_allowed("https://github.com/mixneko/Label-Printer"));
+        assert!(url_allowed("https://ko-fi.com/mixneko"));
+        assert!(!url_allowed("https://ko-fi.com/mixneko-evil"));
+        assert!(!url_allowed("https://ko-fi.com/someoneelse"));
         assert!(url_allowed("https://github.com/mixneko/Label-Printer/releases/tag/v0.9.3"));
         assert!(!url_allowed("https://github.com/mixneko/Label-Printer-evil/x"));
         assert!(!url_allowed("https://evil.example/https://github.com/mixneko/Label-Printer"));

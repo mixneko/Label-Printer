@@ -6,6 +6,7 @@ import { ask, open, save } from "@tauri-apps/plugin-dialog";
 import { askClose } from "./closedialog";
 import { showAbout, showLicenses } from "./about";
 import { initTheme } from "./theme";
+import { maybeAskBeer } from "./donate";
 import "./tooltip";
 import { autoCheckEnabled, autoCheckOnStartup, checkForUpdate, maybeShowWhatsNew, setAutoCheck, showWhatsNew } from "./update";
 import { N, applyDom, currentLang, detectLang, saveLang, setLang, t as tr } from "./i18n";
@@ -1298,6 +1299,7 @@ async function printRows(rows: Row[], raws: RawRow[] = []): Promise<void> {
     await invoke("print_labels", { target, jobs });
     const per = jobs[0]?.copies ?? 1;
     setStatus(tr("已送出列印：{rows} 筆資料 × {per} 張 = {total} 張", { rows: rows.length, per, total: rows.length * per }), "ok");
+    maybeAskBeer(rows.length * per);
   } catch (e) {
     setStatus(String(e), "err");
   }

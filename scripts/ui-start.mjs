@@ -29,6 +29,17 @@ await click("start-new"); await sleep(400);
 check("按「建立新標籤」：接著問紙張與標籤尺寸", !(await isOpen("dlg-start")) && (await isOpen("dlg-new")));
 check("尺寸欄位預填目前設定", (await ev("document.getElementById('new-tpl-w').value")) === "60" && (await ev("document.getElementById('new-paper-w').value")) === "62.5");
 await t.shot("new");
+const preset = () => ev("document.getElementById('new-preset').value");
+const val = (id) => ev(`document.getElementById('${id}').value`);
+check("常見尺寸：目前是 60 × 30 時選在該項", (await preset()) === "60x30");
+check("常見尺寸：有三組，含地址條 89 × 28、89 × 36", (await ev("[...document.querySelectorAll('#new-preset optgroup')].map(g => g.label).join('|')")) === "一般標籤|地址條|寄件／出貨"
+  && (await ev("[...document.querySelectorAll('#new-preset optgroup')[1].children].map(o => o.value).join('|')")) === "89x28|89x36");
+await setv("new-preset", "89x28");
+check("選地址條：紙張、標籤、間隙一起填好", (await val("new-tpl-w")) === "89" && (await val("new-tpl-h")) === "28" && (await val("new-paper-w")) === "89" && (await val("new-paper-h")) === "28" && (await val("new-gap")) === "2");
+await t.shot("new-preset");
+const type = (id, v) => ev(`(() => { const e = document.getElementById('${id}'); e.value = '${v}'; e.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+await type("new-tpl-w", 77);
+check("自己改尺寸後顯示「自訂」", (await preset()) === "");
 await click("new-cancel"); await sleep(200);
 check("取消：不改設定、對話框關閉", !(await isOpen("dlg-new")) && (await stored()).tplWmm === 60);
 

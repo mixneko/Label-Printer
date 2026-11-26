@@ -574,6 +574,22 @@ export const de: Table = {
   // v1.0.1 資料分頁
   "拖曳調整側邊欄寬度（雙擊還原）": "Ziehen, um die Breite der Seitenleiste zu ändern (Doppelklick setzt zurück)",
   "調整側邊欄寬度": "Seitenleiste in der Breite ändern",
+  // 請作者喝杯啤酒（1.0.4）
+  "請作者喝杯啤酒": "Dem Autor ein Bier ausgeben",
+  "會用瀏覽器開啟 Ko-fi 贊助網頁": "Öffnet die Ko-fi-Unterstützerseite im Browser",
+  "剛剛送出了 {total} 張標籤。": "Gerade wurden {total} Etiketten gesendet.",
+  "如果 Label Printer 幫上了忙，歡迎請作者喝杯啤酒。贊助完全自由，所有功能都一樣可以使用。": "Wenn Label Printer Ihnen geholfen hat, können Sie dem Autor gern ein Bier ausgeben. Die Unterstützung ist völlig freiwillig; alle Funktionen bleiben unverändert nutzbar.",
+  "「說明 → 關於」新增「請作者喝杯啤酒」按鈕，按下會用瀏覽器開啟贊助網頁": "Unter „Hilfe → Info“ gibt es die neue Schaltfläche „Dem Autor ein Bier ausgeben“, die die Unterstützerseite im Browser öffnet",
+  "一次列印 15 張以上標籤後，會出現一個可以直接關掉的小視窗": "Nach dem Drucken von 15 oder mehr Etiketten auf einmal erscheint ein kleines Fenster, das Sie einfach schließen können",
+  "「請作者喝杯啤酒」的小視窗改成一天最多出現一次": "Das Fenster „Dem Autor ein Bier ausgeben“ erscheint jetzt höchstens einmal am Tag",
+  "用 A4／貼紙紙排版列印時，如果在 Windows 的列印視窗按「取消」，不會再出現那個小視窗": "Beim Drucken eines A4- oder Etikettenbogen-Layouts erscheint das Fenster nicht mehr, wenn Sie im Windows-Druckdialog auf „Abbrechen“ klicken",
+  "常見尺寸": "Gängige Größen",
+  "自訂": "Benutzerdefiniert",
+  "一般標籤": "Allgemeine Etiketten",
+  "地址條": "Adressetiketten",
+  "寄件／出貨": "Versand",
+  "（4 × 6 吋）": "(4 × 6 Zoll)",
+  "新增標籤時可以直接從「常見尺寸」挑選，包含地址條與寄件／出貨標籤": "Beim Anlegen eines neuen Etiketts können Sie unter „Gängige Größen“ wählen, auch Adress- und Versandetiketten",
   // 白話版「新功能」說明（1.0.1～1.0.3）
   "安裝時可以選「只給我自己用」或「所有人都能用」（選後者時 Windows 會要求系統管理員確認）": "Bei der Installation können Sie „Nur für mich“ oder „Für alle Benutzer“ wählen (bei Letzterem fragt Windows nach der Bestätigung durch einen Administrator)",
   "程式會記住視窗的位置和大小，下次開啟時會出現在同一個螢幕、同樣的位置": "Das Programm merkt sich Position und Größe des Fensters und öffnet es beim nächsten Mal auf demselben Bildschirm an derselben Stelle",

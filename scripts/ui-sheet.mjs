@@ -23,7 +23,7 @@ const info = () => ev("document.getElementById('sh-info').textContent");
 const warn = () => ev("(() => { const w = document.getElementById('sh-warn'); return w.hidden ? '' : w.textContent; })()");
 const openSheet = async () => {
   // 列印按鈕右邊的 ▾ → 「貼紙紙／A4 排版列印…」
-  await ev("document.getElementById('print-more').click()"); await sleep(250);
+  await ev("document.getElementById('preview-print').click()"); await sleep(250);
   await ev("[...document.querySelectorAll('#ctx-menu [role=menuitem]')].find(e => e.textContent.trim().startsWith('貼紙紙'))?.click()"); await sleep(900);
 };
 

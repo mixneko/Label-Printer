@@ -34,13 +34,15 @@ if (-not (git ls-remote --tags origin $Tag)) { throw "tag $Tag 尚未推送到 o
 $ver = $Tag.TrimStart('v')
 $files = @()
 # 主程式檔名由 tauri.conf.json 的 mainBinaryName 決定（Label Printer.exe）；免安裝版與安裝檔統一以「Label Printer」命名
-$exe = 'src-tauri\target\release\Label Printer.exe'
+# 測試版（標籤帶 -）是用 fast 設定檔打包的（scripts/build.mjs）
+$out = if ($ver -match '-') { 'src-tauri\target\fast' } else { 'src-tauri\target\release' }
+$exe = "$out\Label Printer.exe"
 if (Test-Path -LiteralPath $exe) {
     $files += @{ Path = (Resolve-Path -LiteralPath $exe).Path; Name = "Label Printer_${ver}_x64-portable.exe" }
 }
-$setup = Get-ChildItem "src-tauri\target\release\bundle\nsis\*_${ver}_x64-setup.exe" -ErrorAction SilentlyContinue
+$setup = Get-ChildItem "$out\bundle\nsis\*_${ver}_x64-setup.exe" -ErrorAction SilentlyContinue
 foreach ($s in $setup) { $files += @{ Path = $s.FullName; Name = $s.Name } }
-if (-not $setup) { throw "找不到版本 $ver 的安裝檔，請確認已用該版本執行 npm run tauri build" }
+if (-not $setup) { throw "找不到版本 $ver 的安裝檔，請確認已用該版本執行 npm run dist" }
 
 $auth = @('-H', "Authorization: token $($env:GIT_TOKEN)")
 # git 會回傳多行陣列，必須合併成單一字串，否則 Gitea 會回 422

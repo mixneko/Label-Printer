@@ -64,11 +64,11 @@ Requiere Windows 10 u 11 de 64 bits. El instalador añade el componente WebView2
 
 ## Primeros pasos
 
-1. **Elija su impresora.** La primera vez que inicie el programa, una ventana de «Primera configuración» le pregunta en qué impresora imprimir las etiquetas (el programa no elige por usted, para que las etiquetas no vayan por error a una impresora de oficina). Para cambiarla después, abra **Herramientas → Impresora…**. Si elige una impresora normal (de oficina, PDF), **Imprimir** y **Vista previa de impresión** pasan directamente a la maquetación A4 / hojas de pegatinas.
+1. **Elija su impresora.** La primera vez que inicie el programa, una ventana de «Primera configuración» le pregunta en qué impresora imprimir las etiquetas (el programa no elige por usted, para que las etiquetas no vayan por error a una impresora de oficina). Para cambiarla después, abra **Herramientas → Impresora…**. Si elige una impresora normal (de oficina, PDF), **Vista previa de impresión** pasa directamente a la maquetación A4 / hojas de pegatinas.
 2. **Defina el papel.** Abra **Herramientas → Tamaño del papel y de la etiqueta…** e introduzca el tamaño del papel y de la etiqueta en milímetros.
 3. **Diseñe la etiqueta.** Use el menú **Insertar** o la barra de herramientas para añadir texto, códigos QR, códigos de barras, etc., y arrástrelos a su sitio. Para usar datos de una lista, escriba `{{Item}}` (el nombre de una columna entre dobles llaves) en el texto.
 4. **Elija el origen de datos.** Haga clic en **Elegir origen de datos** y seleccione un archivo Excel o CSV. La primera fila contiene los nombres de las columnas; cada fila siguiente es un registro.
-5. **Marque, previsualice, imprima.** Marque las filas que necesite, compruébelas con **Vista previa de impresión** y haga clic en **Imprimir**. **Copias por registro** indica cuántas copias de cada fila se imprimen.
+5. **Marque, previsualice, imprima.** Marque las filas, pulse **Vista previa de marcadas → Vista previa de impresión de etiquetas**, compruebe el resultado y pulse Imprimir en la ventana de vista previa. **Copias por registro** indica cuántas copias de cada fila se imprimen.
 
 ## Consejos útiles
 
@@ -92,9 +92,18 @@ La versión instalada consulta GitHub una vez en segundo plano al iniciarse. Sol
 
 La carpeta `samples/` incluye un ejemplo listo para usar: `sample-label.lpxl` (una etiqueta de producto de 60×30 mm con código QR, código de barras y fecha) con datos a juego en `sample-items.csv` y `sample-items.xlsx` (columnas Item, Code, Lot, Expiry). Abra la etiqueta y elija uno de los archivos de datos. `sample-items-big5.csv` es la misma lista en la codificación Big5 que usa el Excel de Taiwán al guardar CSV; el programa detecta UTF-8 y Big5 automáticamente.
 
+## Leer Excel para la web
+
+Imprima directamente desde una hoja en la nube: sin esperar a la sincronización y sin registrar ninguna aplicación en Microsoft.
+
+- Pulse **Elegir origen de datos → Excel para la web…**, pegue la dirección de la hoja e inicie sesión una vez en la ventana que aparece. Los datos se muestran en la tabla.
+- Si cambia el archivo en la nube, la tabla se actualiza sola (cada 30 segundos por defecto; ajustable o desactivable). Antes de la vista previa y la impresión se vuelven a obtener; si las filas marcadas cambiaron o se movieron, se detiene para que lo revise.
+- Solo lectura; su archivo no se modifica. El programa no maneja su contraseña. La sesión queda en este equipo y «Cerrar sesión» la borra.
+- Usado con hojas en SharePoint (se recomienda pegar la dirección de la barra del navegador); OneDrive y las cuentas personales son experimentales. No funciona si su organización impide descargar archivos.
+
 ## Conectar con una base de datos (SQLite, Access, ODBC)
 
-Además de Excel y CSV, una base de datos puede ser su origen de datos: haga clic en **la ▾ junto a Elegir origen de datos → Conectar a una base de datos…** o elija directamente un archivo SQLite o Access (`.db`, `.sqlite`, `.mdb`, `.accdb`) en «Elegir origen de datos». Una vez cargada funciona como Excel: marque filas, previsualice, imprima y cambie de tabla en la lista desplegable.
+Además de Excel y CSV, una base de datos puede ser su origen de datos: haga clic en **Elegir origen de datos → Conectar a una base de datos…** o elija directamente un archivo SQLite o Access (`.db`, `.sqlite`, `.mdb`, `.accdb`) en «Elegir origen de datos». Una vez cargada funciona como Excel: marque filas, previsualice, imprima y cambie de tabla en la lista desplegable.
 
 - **SQLite**: basta con elegir el archivo. Probado con archivos SQLite reales.
 - **Access**: necesita el «Microsoft Access Driver (*.mdb, *.accdb)» en el equipo (se instala con Microsoft Office o con el Access Database Engine gratuito; debe tener los mismos bits que este programa, es decir, 64 bits). Aún no se ha verificado con un archivo Access real, por eso se marca como experimental.
@@ -105,9 +114,9 @@ Además de Excel y CSV, una base de datos puede ser su origen de datos: haga cli
 
 Las dos funciones siguientes están escritas y superan las pruebas automáticas, pero **aún no se han verificado en impresoras reales**, por eso se marcan como experimentales. Si las prueba, le agradeceremos que cuente el resultado.
 
-**Otros lenguajes de impresoras de etiquetas.** Además de TSPL (TSC), que es el predeterminado, puede elegir ZPL II, EPL2, CPCL, DPL (Datamax-O'Neil) y SBPL (SATO). Al elegir una impresora de Windows, el programa deduce el lenguaje por el nombre del controlador; si no puede (nunca lo adivina por usted), o si se conecta por Raw TCP, elija usted el **Lenguaje de la impresora** (en la primera configuración o en **Herramientas → Impresora…**). Si la impresora no es de etiquetas (de oficina, PDF, etc.), elija «Impresora normal» o deje que el programa la detecte; **Imprimir** y **Vista previa de impresión** pasan entonces directamente a la maquetación A4 / hojas de pegatinas. De forma predeterminada estos lenguajes solo envían un mapa de bits. Marque «Imprimir con los comandos nativos de la impresora» en las propiedades de un código de barras o QR para usar los comandos propios de la impresora (aparece un aviso «Experimental» con un icono de matraz; cuéntenos cómo sale la impresión; EPL2 y SBPL no tienen comando para QR, así que los QR se siguen imprimiendo como imagen).
+**Otros lenguajes de impresoras de etiquetas.** Además de TSPL (TSC), que es el predeterminado, puede elegir ZPL II, EPL2, CPCL, DPL (Datamax-O'Neil) y SBPL (SATO). Al elegir una impresora de Windows, el programa deduce el lenguaje por el nombre del controlador; si no puede (nunca lo adivina por usted), o si se conecta por Raw TCP, elija usted el **Lenguaje de la impresora** (en la primera configuración o en **Herramientas → Impresora…**). Si la impresora no es de etiquetas (de oficina, PDF, etc.), elija «Impresora normal» o deje que el programa la detecte; **Vista previa de impresión** pasa entonces directamente a la maquetación A4 / hojas de pegatinas. De forma predeterminada estos lenguajes solo envían un mapa de bits. Marque «Imprimir con los comandos nativos de la impresora» en las propiedades de un código de barras o QR para usar los comandos propios de la impresora (aparece un aviso «Experimental» con un icono de matraz; cuéntenos cómo sale la impresión; EPL2 y SBPL no tienen comando para QR, así que los QR se siguen imprimiendo como imagen).
 
-**Hojas de pegatinas y maquetación A4.** Haga clic en **la ▾ junto a Imprimir → Impresión en hojas de pegatinas / A4…** (también desde la ▾ junto a Vista previa de impresión; con una impresora normal seleccionada, basta con pulsar Imprimir o Vista previa de impresión) para colocar etiquetas en varias columnas y filas sobre A4 o Letter:
+**Hojas de pegatinas y maquetación A4.** Pulse **Vista previa de impresión → Vista previa de hojas de pegatinas / A4…** (también en «Vista previa de marcadas», sobre la tabla; con una impresora normal, la vista previa lo abre directamente) para colocar etiquetas en columnas y filas sobre A4 o Letter:
 
 - «Hoja de pegatinas troqueladas» no imprime líneas de corte; «Papel normal sin líneas de corte» puede imprimir marcas en las esquinas o líneas de cuadrícula discontinuas para ayudarle a cortar (por ejemplo, tiras para sobres).
 - **Margen de seguridad** (5 mm por defecto): las impresoras normalmente no pueden imprimir el borde más externo del papel. Las etiquetas o marcas de corte que queden en esa franja se muestran en rojo en la vista previa. «Llenar la página y centrar» la evita automáticamente.
@@ -122,7 +131,7 @@ Instale primero la impresora en Windows (Configuración → Impresoras y escáne
 Las etiquetas usan las fuentes instaladas en Windows. Instale las mismas fuentes en el otro equipo.
 
 **¿Se envían mis datos a algún sitio?**  
-No. El programa funciona sin conexión. El único acceso a la red es la comprobación de actualizaciones descrita arriba, que solo pregunta a GitHub si existe una versión más reciente.
+Sus datos no se envían a nadie. El programa solo se conecta para buscar actualizaciones (únicamente pregunta a GitHub si hay una versión nueva) y cuando usted usa Excel para la web o una base de datos (se conecta directamente al lugar que indique, solo para leer).
 
 **¿Dónde se guardan mis etiquetas?**  
 Donde usted elija, como archivos con la extensión `.lpxl`.
@@ -139,7 +148,7 @@ Tecnología: Tauri 2 (Rust) + TypeScript + Vite + Konva. La etiqueta se renderiz
 ```powershell
 npm install
 npm run tauri dev        # modo de desarrollo
-npm run tauri build      # exe portátil + instalador NSIS
+npm run dist             # exe portátil + instalador NSIS
 npm run test:ui          # pruebas de interfaz (requiere Microsoft Edge)
 cargo test --manifest-path src-tauri/Cargo.toml
 ```

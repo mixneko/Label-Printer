@@ -19,9 +19,9 @@ const closeMenu = () => ev("document.dispatchEvent(new KeyboardEvent('keydown', 
 const click = (id) => ev(`document.getElementById('${id}').click()`).then(() => sleep(300));
 const pick = (label) => ev(`[...document.querySelectorAll('#ctx-menu [role=menuitem]')].find(e => e.textContent.trim().startsWith(${JSON.stringify(label)}))?.click()`).then(() => sleep(700));
 
-check("五個按鈕旁都有 ▾（列印、預覽列印、選擇資料來源、資料表的預覽與列印）",
-  (await ev("['print', 'preview-print', 'import-table', 'data-print', 'data-preview'].every((id) => !!document.getElementById(id + '-more'))")) === true);
-check("▾ 都有說明文字（滑過會顯示）", (await ev("['print', 'preview-print', 'import-table', 'data-print', 'data-preview'].every((id) => document.getElementById(id + '-more').title.length > 0)")) === true);
+check("畫面上沒有直接列印的按鈕，也沒有分開的 ▾",
+  (await ev("['print', 'data-print'].every((id) => document.getElementById(id).offsetParent === null) && !document.querySelector('.split-more[id*=print], .split-more[id*=preview]')")) === true);
+check("「預覽列印」按鈕上有下拉記號與說明", (await ev("!!document.querySelector('#preview-print .caret') && document.getElementById('preview-print').title.length > 0")) === true);
 
 // 工具列在 1280 寬仍是單列
 // 單列的高度約 44 px；換行的話會超過 80 px
@@ -29,51 +29,42 @@ const barH = await ev("Math.round(document.querySelector('.toolbar').getBounding
 check("工具列在 1280 寬度仍是單列（高度 < 60 px）", barH < 60, `${barH} px`);
 await t.shot("toolbar");
 
-// 列印：主按鈕一鍵照舊（直接送出，不跳選單）
 await click("add-text");
-await click("print");
-check("按「列印」仍是一鍵送出 print_labels，沒有跳出選單", (await ev("window.__jobs.length")) === 1 && (await ev("document.getElementById('ctx-menu')?.hidden !== false")) === true);
-
-// 列印 ▾
-await click("print-more");
-check("列印的 ▾：列印到標籤機、貼紙紙／A4 排版列印…", JSON.stringify(await menuItems()) === JSON.stringify(["列印到標籤機", "貼紙紙／A4 排版列印…"]), JSON.stringify(await menuItems()));
+await click("preview-print");
+check("按「預覽列印」先選哪一種預覽：標籤、貼紙紙／A4（不直接列印）",
+  JSON.stringify(await menuItems()) === JSON.stringify(["預覽標籤列印", "貼紙紙／A4 排版預覽…"]) && (await ev("window.__jobs.length")) === 0, JSON.stringify(await menuItems()));
 await t.shot("print-menu");
-await pick("列印到標籤機");
-check("▾ →「列印到標籤機」等同按主按鈕", (await ev("window.__jobs.length")) === 2);
-await click("print-more"); await pick("貼紙紙");
-check("▾ →「貼紙紙／A4 排版列印…」開啟排版對話框", await ev("document.getElementById('dlg-sheet').open"));
-await ev("document.getElementById('sh-close').click()"); await sleep(200);
-
-// 預覽 ▾
-await click("preview-print-more");
-check("預覽列印的 ▾：預覽標籤列印、貼紙紙／A4 排版預覽…", JSON.stringify(await menuItems()) === JSON.stringify(["預覽標籤列印", "貼紙紙／A4 排版預覽…"]), JSON.stringify(await menuItems()));
 await pick("預覽標籤列印");
-check("▾ →「預覽標籤列印」開啟原本的預覽視窗", await ev("document.getElementById('pv-dialog').open"));
-await ev("document.getElementById('pv-close').click()"); await sleep(200);
-await click("preview-print-more"); await pick("貼紙紙");
-check("▾ →「貼紙紙／A4 排版預覽…」開啟排版對話框", await ev("document.getElementById('dlg-sheet').open"));
+check("→「預覽標籤列印」開啟預覽視窗", await ev("document.getElementById('pv-dialog').open"));
+check("預覽視窗顯示目前的印表機", (await ev("document.getElementById('pv-printer').value")) === "TSC TTP-244 Pro");
+await t.shot("preview-printer");
+await click("pv-print");
+check("在預覽裡按列印才送出", (await ev("window.__jobs.length")) === 1);
+await click("preview-print"); await pick("貼紙紙");
+check("→「貼紙紙／A4 排版預覽…」開啟排版對話框", await ev("document.getElementById('dlg-sheet').open"));
 await ev("document.getElementById('sh-close').click()"); await sleep(200);
 
-// 資料來源 ▾
+// 選擇資料來源：整顆按鈕就是選單（沒有另外的 ▾）
+check("「選擇資料來源」沒有分開的 ▾", (await ev("!document.getElementById('import-table-more') && !!document.querySelector('#import-table .caret')")) === true);
 await click("import-table");
-check("按「選擇資料來源」仍是直接跳出選檔對話框", (await ev("window.__open")) === 1 && (await ev("document.getElementById('dlg-db').open")) === false);
-await click("import-table-more");
-check("資料來源的 ▾：Excel／CSV／資料庫檔案…、連線到資料庫…", JSON.stringify(await menuItems()) === JSON.stringify(["Excel／CSV／資料庫檔案…", "連線到資料庫…"]), JSON.stringify(await menuItems()));
+check("按下去先選匯入方式：檔案、資料庫、網頁版 Excel（不直接跳選檔）", JSON.stringify(await menuItems()) === JSON.stringify(["Excel／CSV／資料庫檔案…", "連線到資料庫…", "網頁版 Excel…"]) && (await ev("window.__open")) === 0, JSON.stringify(await menuItems()));
 await pick("Excel");
-check("▾ →「Excel／CSV／資料庫檔案…」等同按主按鈕（又跳一次選檔對話框）", (await ev("window.__open")) === 2);
-await click("import-table-more"); await pick("連線到資料庫");
+check("「Excel／CSV／資料庫檔案…」跳出選檔對話框", (await ev("window.__open")) === 1);
+await click("import-table"); await pick("連線到資料庫");
 check("▾ →「連線到資料庫…」開啟資料庫對話框", await ev("document.getElementById('dlg-db').open"));
 await ev("document.getElementById('dlg-db').close()");
 
-// 資料表面板：沒勾選時 ▾ 跟著停用；檔案選單不再放這兩項
+// 資料表面板：沒勾選時停用；勾選後按下同樣先選哪一種預覽
 await ev("document.getElementById('db-kind').value = 'file'; document.getElementById('db-path').value = 'D:/x/a.sqlite'; document.getElementById('db-go').click()"); await sleep(600);
 check("載入資料後資料表面板出現", await ev("!document.getElementById('data-panel').hidden"));
-check("沒勾選任何列：資料表的列印／預覽 ▾ 也停用", (await ev("document.getElementById('data-print-more').disabled && document.getElementById('data-preview-more').disabled")) === true);
+check("沒勾選任何列：「預覽勾選的列」停用", (await ev("document.getElementById('data-preview').disabled")) === true);
 await ev("document.querySelector('#data-table tr:nth-child(2) input[type=checkbox]')?.click()"); await sleep(300);
-check("勾選一列後 ▾ 啟用", (await ev("!document.getElementById('data-print-more').disabled && !document.getElementById('data-preview-more').disabled")) === true);
-await click("data-print-more");
-check("資料表的列印 ▾：列印到標籤機、貼紙紙／A4 排版列印…", JSON.stringify(await menuItems()) === JSON.stringify(["列印到標籤機", "貼紙紙／A4 排版列印…"]));
+check("勾選一列後啟用", (await ev("!document.getElementById('data-preview').disabled")) === true);
+await click("data-preview");
+check("「預覽勾選的列」：標籤、貼紙紙／A4 兩種", JSON.stringify(await menuItems()) === JSON.stringify(["預覽標籤列印", "貼紙紙／A4 排版預覽…"]));
 await closeMenu();
+check("資料表上方的按鈕列在 1280 寬度是單列", (await ev("document.querySelector('.data-bar').getBoundingClientRect().height")) < 60);
+await t.shot("data-bar");
 await click("file-menu");
 const file = await menuItems();
 check("檔案選單不再放排版列印與資料庫連線（避免與工具列重複）", !file.some((s) => s.includes("貼紙紙") || s.includes("連線到資料庫")), JSON.stringify(file));

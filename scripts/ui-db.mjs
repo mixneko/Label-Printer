@@ -27,12 +27,12 @@ const dlgOpen = () => ev("document.getElementById('dlg-db').open");
 const msg = () => ev("document.getElementById('db-msg').textContent");
 const openDlg = async () => {
   // 選擇資料來源按鈕右邊的 ▾ → 「連線到資料庫…」
-  await ev("document.getElementById('import-table-more').click()"); await sleep(250);
+  await ev("document.getElementById('import-table').click()"); await sleep(250);
   await ev("[...document.querySelectorAll('#ctx-menu [role=menuitem]')].find(e => e.textContent.trim().startsWith('連線到資料庫'))?.click()"); await sleep(600);
 };
 
 // 先用一般的 Excel 路徑確認標籤仍是「工作表」
-await ev("document.getElementById('import-table').click()"); await sleep(400); // 對話框回傳 .sqlite（模擬）→ 也是資料庫
+await ev("document.getElementById('import-file').click()"); await sleep(400); // 對話框回傳 .sqlite（模擬）→ 也是資料庫
 check("選擇資料來源選到 .sqlite 檔：以檔名顯示、標籤為「資料表」", (await ev("document.getElementById('data-file').textContent")) === "shop.sqlite" && (await ev("document.getElementById('data-sheet-label').textContent")) === "資料表");
 check("資料庫的資料表清單放進下拉（items、orders）", (await ev("[...document.getElementById('data-sheet').options].map(o => o.value).join(',')")) === "items,orders");
 await ev("document.getElementById('data-close').click()"); await sleep(200);
@@ -142,6 +142,6 @@ await ev("document.getElementById('dlg-db').close()");
 
 // 一般 Excel 檔仍標示「工作表」
 await ev("(window.__TAURI_INTERNALS__.invoke = ((orig) => async (c, a) => c === 'plugin:dialog|open' ? 'D:/data/book.xlsx' : orig(c, a))(window.__TAURI_INTERNALS__.invoke), 1)");
-await ev("document.getElementById('import-table').click()"); await sleep(500);
+await ev("document.getElementById('import-file').click()"); await sleep(500);
 check("Excel 檔：標籤仍是「工作表」", (await ev("document.getElementById('data-sheet-label').textContent")) === "工作表" && (await ev("document.getElementById('data-file').textContent")) === "book.xlsx");
 await t.finish();

@@ -92,21 +92,21 @@ const closeSheet = async () => { await ev("document.getElementById('sh-close').c
 await ev("document.getElementById('print').click()"); await sleep(900);
 check("一般印表機：按「列印」直接開啟 A4／貼紙紙排版，不送標籤指令", (await sheetOpen()) && (await ev("window.__jobs.length")) === 0);
 await closeSheet();
-await ev("document.getElementById('preview-print').click()"); await sleep(900);
+await ev("document.getElementById('preview-direct').click()"); await sleep(900);
 check("一般印表機：按「預覽列印」也直接進 A4／貼紙紙排版（不是標籤預覽）", (await sheetOpen()) && !(await ev("document.getElementById('pv-dialog').open")));
 await closeSheet();
 await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, bubbles: true }))"); await sleep(900);
 check("一般印表機：Ctrl+P 也進 A4／貼紙紙排版", await sheetOpen());
 await closeSheet();
-await ev("document.getElementById('print-more').click()"); await sleep(250);
+await ev("document.getElementById('preview-print').click()"); await sleep(250);
 const off = await ev("JSON.stringify([...document.querySelectorAll('#ctx-menu [role=menuitem]')].map(e => [e.textContent.trim(), e.getAttribute('aria-disabled') === 'true' || e.classList.contains('disabled')]))").then(JSON.parse);
-check("▾ 裡「列印到標籤機」停用並說明原因，排版選項可用", off[0][1] === true && off[0][0].includes("目前選的是一般印表機") && off[1][1] === false, JSON.stringify(off));
+check("「預覽列印」選單裡標籤預覽停用並說明原因，排版選項可用", off[0][1] === true && off[0][0].includes("目前選的是一般印表機") && off[1][1] === false, JSON.stringify(off));
 await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))"); await sleep(200);
 // 換回標籤機：恢復原本的行為
 await setv("printer-name", "Zebra ZD420"); await sleep(500);
 await ev("document.getElementById('print').click()"); await sleep(500);
 check("換成標籤機後：按「列印」又是直接送出標籤", (await ev("window.__jobs.length")) === 1 && !(await sheetOpen()));
-await ev("document.getElementById('preview-print').click()"); await sleep(900);
+await ev("document.getElementById('preview-direct').click()"); await sleep(900);
 check("換成標籤機後：「預覽列印」又是標籤預覽", (await ev("document.getElementById('pv-dialog').open")) && !(await sheetOpen()));
 await ev("document.getElementById('pv-close').click()"); await sleep(250);
 

@@ -74,7 +74,7 @@ for (const lang of LANGS) {
   await send("Page.navigate", { url: server.url }); await waitReady(); await sleep(1200);
   await ev("document.querySelectorAll('#layer-list li')[5]?.click()"); await sleep(400);
   await shot("editor");
-  await ev("document.getElementById('import-table').click()"); await sleep(1500);
+  await ev("document.getElementById('import-file').click()"); await sleep(1500);
   await ev("[...document.querySelectorAll('#data-table tr')].slice(1, 4).forEach((r) => r.querySelector('input[type=checkbox]')?.click())"); await sleep(400);
   await ev("document.querySelectorAll('#data-table tr')[1]?.querySelectorAll('td')[2]?.click()"); await sleep(600);
   await shot("data");
@@ -84,11 +84,11 @@ for (const lang of LANGS) {
   await ev("(() => { const s = document.getElementById('db-src'); s.value = 'drv:ODBC Driver 17 for SQL Server'; s.dispatchEvent(new Event('change', { bubbles: true })); document.getElementById('db-cs').value = 'Driver={ODBC Driver 17 for SQL Server};Server=db.example.com;Database=shop;'; document.getElementById('db-sql').value = \"SELECT Item, Code, Lot, Expiry FROM items WHERE Lot = 'B2611'\"; })()"); await sleep(500);
   await shot("db");
   await ev("document.getElementById('dlg-db').close()"); await sleep(300);
-  await ev("document.getElementById('preview-print').click()"); await sleep(1200);
+  await ev("document.getElementById('preview-direct').click()"); await sleep(1200);
   await shot("preview");
   await ev("document.getElementById('pv-dialog').close()"); await sleep(300);
   // 「列印」右邊的 ▾ 選單
-  await ev("document.getElementById('print-more').click()"); await sleep(600);
+  await ev("document.getElementById('preview-print').click()"); await sleep(600);
   await shot("menu");
   await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))"); await sleep(300);
   await ev("document.getElementById('dlg-quality').showModal()"); await sleep(500);

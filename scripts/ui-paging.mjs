@@ -31,7 +31,7 @@ const calls = () => ev("JSON.stringify(window.__calls)").then(JSON.parse);
 const q = (js) => ev(js);
 const load = async (path, n) => {
   await ev(`localStorage.setItem('t.path', ${JSON.stringify(JSON.stringify(path))}); localStorage.setItem('t.n', '${n}')`);
-  await ev("window.__calls.length = 0; document.getElementById('import-table').click()");
+  await ev("window.__calls.length = 0; document.getElementById('import-file').click()");
   await sleep(500);
 };
 const rowsShown = () => q("document.querySelectorAll('#data-table tr[data-i]').length");
@@ -85,7 +85,7 @@ check("資料庫：第 3 頁「全不選」只清掉這一頁（其他頁的勾�
 
 // 列印預覽拿得到跨頁勾選的資料（此時第 1 頁勾 2 列、第 2 頁勾 1000 列）
 await click("data-prev"); await click("data-prev");
-await ev("document.getElementById('data-preview').click()"); await sleep(1200);
+await ev("document.getElementById('data-preview-direct').click()"); await sleep(1200);
 const pvTotal = await q("document.getElementById('pv-total').textContent");
 check("資料庫：預覽列印收到全部 1002 筆（含換頁前勾的）", pvTotal.startsWith("1002 筆資料"), pvTotal);
 const names = await q("document.getElementById('pv-page').textContent");
@@ -151,7 +151,7 @@ check("Excel：輸入 3 跳到最後一頁（只有 500 列）、不向後端讀
 await click("data-first"); await click("data-last");
 check("Excel：>| 直達最後一頁", (await pageLabel()) === "第 3 / 3 頁（共 2500 列）" && (await dis("data-last")) === true);
 check("Excel：最後一頁 500 列、「下一頁」停用", (await rowsShown()) === 500 && (await q("document.getElementById('data-next').disabled")) === true);
-await ev("document.getElementById('data-preview').click()"); await sleep(1200);
+await ev("document.getElementById('data-preview-direct').click()"); await sleep(1200);
 check("Excel：預覽列印拿到全部 2500 筆", (await q("document.getElementById('pv-total').textContent")).startsWith("2500 筆資料"));
 await ev("document.getElementById('pv-close').click()"); await sleep(200);
 

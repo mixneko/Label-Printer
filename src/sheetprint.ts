@@ -11,6 +11,8 @@ import type { Row } from "./template";
 import { t } from "./i18n";
 
 export interface SheetApi {
+  /** 開啟與列印前確認資料是最新的（網頁版 Excel）；回傳 false 就停下 */
+  before?(): Promise<boolean>;
   /** 要排版的資料：資料表勾選的列；沒有勾選就是「變數測試資料」的單筆 */
   source(): { rows: Row[]; raws: import("./template").RawRow[] };
   /** 每筆資料的張數（工具列的「每筆張數」） */
@@ -176,6 +178,11 @@ async function exportPdf(): Promise<void> {
 async function printSheets(): Promise<void> {
   if (busy) return;
   busy = true; await refresh();
+  if (api.before && !(await api.before())) {
+    $<HTMLDialogElement>("dlg-sheet").close();
+    busy = false; void refresh();
+    return;
+  }
   const urls: string[] = [];
   try {
     const host = $("sheet-print");
@@ -222,6 +229,7 @@ async function printSheets(): Promise<void> {
 
 export async function openSheet(): Promise<void> {
   if (!api) return;
+  if (api.before && !(await api.before())) return;
   const hasSaved = (() => { try { return localStorage.getItem(SAVED_KEY) !== null; } catch { return false; } })();
   cfg = loadSheet();
   const lm = api.labelMm();

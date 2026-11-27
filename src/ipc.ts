@@ -30,6 +30,8 @@ const MESSAGES = [
   N("SBPL 原生條碼的人眼可讀文字只支援 EAN／UPC"),
   N("SBPL（Basic Command）沒有 QR Code 的原生指令"),
   N("不允許的網址"),
+  N("請貼上 SharePoint 或 OneDrive 的網址（https 開頭）"),
+  N("無法開啟登入視窗：{e}"),
   N("此平台不支援"),
   N("讀取檔案失敗：{e}"),
   N("寫入檔案失敗：{e}"),

@@ -94,7 +94,8 @@
     </nav>
 
     <header class="toolbar">
-      <button id="import-table" class="btn" title="選擇資料來源：載入 Excel 或 CSV，勾選要列印的列"><svg class="ic"><use href="#i-table" /></svg><span class="lbl">選擇資料來源</span></button>
+      <button id="import-table" class="btn" title="選擇資料來源：載入 Excel、CSV、資料庫或網頁版 Excel，勾選要列印的列" aria-haspopup="menu"><svg class="ic"><use href="#i-table" /></svg><span class="lbl">選擇資料來源</span><svg class="ic caret"><use href="#i-chevron" /></svg></button>
+      <button id="import-file" type="button" hidden></button>
       <span id="tpl-name" class="tpl-name" title="尚未儲存">未命名標籤</span>
 
       <span class="divider"></span>
@@ -123,8 +124,10 @@
       <label class="copies" title="每一筆資料（或單張測試）各印幾張">每筆張數
         <input id="copies" type="number" min="1" value="1" />
       </label>
-      <button id="preview-print" class="btn" title="預覽列印 (Ctrl+P)：看實際要印出的樣子，可逐張檢查後再列印"><svg class="ic"><use href="#i-eye-sm" /></svg><span class="lbl">預覽列印</span></button>
-      <button id="print" class="btn primary" title="列印目前的標籤（使用「變數測試資料」）"><svg class="ic"><use href="#i-printer" /></svg><span class="lbl">列印</span></button>
+      <button id="preview-print" class="btn primary" title="預覽列印 (Ctrl+P)：看實際要印出的樣子，確認後在預覽視窗按列印" aria-haspopup="menu"><svg class="ic"><use href="#i-eye-sm" /></svg><span class="lbl">預覽列印</span><svg class="ic caret"><use href="#i-chevron" /></svg></button>
+      <!-- 畫面上不提供直接列印（一律先預覽）；以下隱藏按鈕供程式與自動測試直接呼叫 -->
+      <button id="print" type="button" hidden></button>
+      <button id="preview-direct" type="button" hidden></button>
     </header>
 
     <main class="layout">
@@ -294,11 +297,26 @@
         <button id="data-invert" type="button" class="btn sm">反選</button>
         <span id="data-count" class="count"></span>
         <span class="spacer"></span>
-        <button id="data-preview" type="button" class="btn" disabled title="預覽勾選的列實際要印出的樣子（可逐張檢查）"><svg class="ic"><use href="#i-eye-sm" /></svg>預覽列印</button>
-        <button id="data-print" type="button" class="btn primary" disabled><svg class="ic"><use href="#i-printer" /></svg>列印勾選的列</button>
+        <button id="data-preview" type="button" class="btn primary" disabled title="預覽勾選的列實際要印出的樣子，確認後在預覽視窗按列印" aria-haspopup="menu"><svg class="ic"><use href="#i-eye-sm" /></svg>預覽勾選的列<svg class="ic caret"><use href="#i-chevron" /></svg></button>
+        <button id="data-print" type="button" hidden></button>
+        <button id="data-preview-direct" type="button" hidden></button>
         <button id="data-close" type="button" class="btn icon" title="關閉資料表"><svg class="ic"><use href="#i-x" /></svg></button>
       </div>
-      <div id="data-chips" class="chips" data-hint="點欄位可插入到選取的物件："></div>
+      <div class="data-sub">
+        <div id="data-chips" class="chips" data-hint="點欄位可插入到選取的物件："></div>
+        <span id="data-web" class="data-web" hidden>
+          <span id="data-web-at" class="count"></span>
+          <label class="inline"><span>自動更新</span>
+            <select id="data-interval">
+              <option value="15">15 秒</option>
+              <option value="30">30 秒</option>
+              <option value="60">1 分鐘</option>
+              <option value="300">5 分鐘</option>
+              <option value="0">關閉</option>
+            </select>
+          </label>
+        </span>
+      </div>
       <div class="data-scroll"><table id="data-table"></table></div>
       <div id="data-pager" class="data-pager" hidden>
         <button id="data-first" type="button" class="btn sm" title="第一頁">|&lt;</button>
@@ -556,6 +574,29 @@
     </dialog>
 
     <!-- 預覽列印（工具列「預覽列印」、Ctrl+P，或資料表上的「預覽列印」） -->
+    <!-- 網頁版 Excel -->
+    <dialog id="dlg-m365" class="dialog settings-dlg">
+      <header class="dlg-head"><h2>網頁版 Excel</h2></header>
+      <div class="dlg-body">
+        <p class="hint">直接讀取 SharePoint 或 OneDrive 上的試算表，內容改了會自動更新。只讀取，不會修改你的檔案。</p>
+        <label>試算表網址（SharePoint 或 OneDrive）
+          <input id="m365-url" type="text" spellcheck="false" autocomplete="off" />
+        </label>
+        <div class="btn-row"><button id="m365-connect" type="button" class="btn sm primary">連線</button></div>
+        <div id="m365-recent-box" hidden>
+          <p class="hint">最近用過的檔案</p>
+          <ul id="m365-recent" class="m365-recent"></ul>
+        </div>
+        <p id="m365-msg" class="m365-msg" role="status"></p>
+        <details id="m365-report-box" hidden>
+          <summary>回報用資訊（不含網址內容與檔名）</summary>
+          <pre id="m365-report" class="m365-detail"></pre>
+          <button id="m365-copy" type="button" class="btn sm">複製</button>
+        </details>
+      </div>
+      <footer class="dlg-foot"><button id="m365-logout" type="button" class="btn">登出</button><span class="spacer"></span><button type="button" class="btn" data-dlg-close>關閉</button></footer>
+    </dialog>
+
     <!-- 連線到資料庫 -->
     <dialog id="dlg-db" class="dialog settings-dlg">
       <header class="dlg-head"><h2>連線到資料庫</h2></header>
@@ -718,6 +759,10 @@
         <h2>預覽列印</h2>
         <button id="pv-close-x" type="button" class="btn icon" title="關閉"><svg class="ic"><use href="#i-x" /></svg></button>
       </header>
+      <div class="pv-bar pv-printer-bar">
+        <label class="inline">印表機 <select id="pv-printer"></select></label>
+        <span id="pv-printer-note" class="pv-printer-note" role="status"></span>
+      </div>
       <div class="pv-bar">
         <span id="pv-nav" class="pv-nav">
           <button id="pv-prev" type="button" class="btn sm" title="上一張（←）">‹ 上一張</button>

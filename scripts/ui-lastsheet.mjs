@@ -21,7 +21,7 @@ const { ev, sleep, check } = t;
 const calls = () => ev("JSON.stringify(window.__calls)").then(JSON.parse);
 const open = async (path, sheets) => {
   await ev(`localStorage.setItem('t.path', ${JSON.stringify(JSON.stringify(path))}); localStorage.setItem('t.sheets', ${JSON.stringify(JSON.stringify(sheets))})`);
-  await ev("window.__calls.length = 0; document.getElementById('import-table').click()");
+  await ev("window.__calls.length = 0; document.getElementById('import-file').click()");
   await sleep(400);
 };
 const shown = () => ev("document.getElementById('data-sheet').value");

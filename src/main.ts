@@ -14,8 +14,10 @@ import { LANG_NAMES, LOCALES, type Lang } from "./locales";
 import { attachGuides, guidesEnabled, setGuidesEnabled } from "./guides";
 import { calibrationElements } from "./calibration";
 import { canvasToMono, monoToCanvas, toBase64, type PackedBitmap } from "./bitmap";
-import { initTable, loadSource, selectedRows, tableHeaders } from "./table";
+import { ensureFresh, initTable, loadSource, loadWeb, selectedRows, stopWeb, tableHeaders } from "./table";
 import { initDbDialog, openDbDialog } from "./dbdialog";
+import { initM365Dialog, openM365Dialog } from "./m365";
+import { webRecents } from "./websync";
 import { initPreview, openPreview } from "./printpreview";
 import { initSheet, openSheet } from "./sheetprint";
 import { addSplit } from "./splitbtn";
@@ -1658,6 +1660,7 @@ initTable({
 });
 // 預覽列印：勾選了資料列就逐張預覽那些列，否則預覽「變數測試資料」的單張
 initPreview({
+  before: ensureFresh,
   source: () => {
     const sel = selectedRows();
     return sel
@@ -1681,12 +1684,24 @@ initPreview({
       summary: `${nativeNote()}${tr("印表機：{printer}　濃度 {density}　速度 {speed}　字體加粗 {bold}　撕紙位置 {tear}", { printer, density: settings.density, speed: settings.speed, bold, tear: settings.tear ? tr("開") : tr("關") })}${feed}`,
     };
   },
-  print: (rows, raws) => printRows(rows, raws),
+  print: async (rows, raws) => { if (await ensureFresh()) await printRows(rows, raws); },
+  printers: () => settings.printerMode === "windows"
+    ? { names: [...$<HTMLSelectElement>("printer-name").options].map((o) => o.value).filter(Boolean), current: settings.printerName }
+    : { names: [], current: "", fixed: tr("直接連線 {address}", { address: `${settings.host}:${settings.port}` }) },
+  setPrinter: async (name) => {
+    const select = $<HTMLSelectElement>("printer-name");
+    select.value = name;
+    select.dispatchEvent(new Event("change")); // 存設定、偵測語言，和在「印表機」視窗裡改是同一條路
+    await detecting;
+  },
+  printerNote: () => (isOffice() ? tr("這是一般印表機，不能直接印標籤；按列印會改開 A4／貼紙紙排版。") : ""),
 });
 // 連線到資料庫（SQLite、Access、ODBC）：載入後與 Excel／CSV 走同一個資料表面板
+initM365Dialog({ load: loadWeb, loggedOut: stopWeb });
 initDbDialog({ load: (path, sheet, label) => loadSource(path, sheet, label) });
 // 貼紙紙／A4 排版列印：資料來源與預覽列印相同（勾選的列，或「變數測試資料」）
 initSheet({
+  before: ensureFresh,
   source: () => { const sel = selectedRows(); return sel ? { rows: sel.rows, raws: sel.raws } : { rows: [currentRow()], raws: [] }; },
   copies: () => Math.max(1, Number($<HTMLInputElement>("copies").value) || 1),
   labelMm: () => ({ w: settings.tplWmm, h: settings.tplHmm }),
@@ -1700,35 +1715,40 @@ initSheet({
   },
   status: setStatus,
 });
-// 分割按鈕：原本的按鈕一鍵照舊，▾ 裡放另一種做法（A4／貼紙紙排版、資料庫連線）
+// 畫面上沒有直接列印：「預覽列印」按下去選要看哪一種預覽，確認後在預覽視窗裡按列印
 const NOT_LABEL = (): string => (isOffice() ? tr("目前選的是一般印表機") : "");
-const printMoreItems = (): MenuItem[] => [
-  { icon: "printer", label: tr("列印到標籤機"), hint: NOT_LABEL(), disabled: isOffice(), onClick: () => $("print").click() },
-  { icon: "sheet", label: tr("貼紙紙／A4 排版列印…"), onClick: () => void openSheet() },
-];
-const previewMoreItems = (): MenuItem[] => [
+const previewMenuItems = (): MenuItem[] => [
   { icon: "eye", label: tr("預覽標籤列印"), hint: isOffice() ? NOT_LABEL() : "Ctrl+P", disabled: isOffice(), onClick: () => void openPreview() },
   { icon: "sheet", label: tr("貼紙紙／A4 排版預覽…"), onClick: () => void openSheet() },
 ];
-const dataMoreItems = (): MenuItem[] => [
-  { icon: "spreadsheet", label: tr("Excel／CSV／資料庫檔案…"), onClick: () => $("import-table").click() },
-  { icon: "database", label: tr("連線到資料庫…"), onClick: () => openDbDialog() },
-];
+for (const id of ["preview-print", "data-preview"]) {
+  $(id).addEventListener("click", () => {
+    const r = $(id).getBoundingClientRect();
+    showMenu(Math.max(4, r.right - 240), r.bottom + 2, previewMenuItems());
+  });
+}
+$("preview-direct").addEventListener("click", () => previewAction());
+const dataMenuItems = (): MenuItem[] => {
+  const recent = webRecents().slice(0, 5);
+  return [
+    { icon: "spreadsheet", label: tr("Excel／CSV／資料庫檔案…"), onClick: () => $("import-file").click() },
+    { icon: "database", label: tr("連線到資料庫…"), onClick: () => openDbDialog() },
+    { icon: "globe", label: tr("網頁版 Excel…"), onClick: () => openM365Dialog() },
+    ...(recent.length ? [{ separator: true } as MenuItem] : []),
+    ...recent.map((r): MenuItem => ({ icon: "globe", label: r.name || r.url, onClick: () => openM365Dialog(r.url) })),
+  ];
+};
+// 「選擇資料來源」整顆按鈕就是選單：按下去選要用哪一種方式匯入
+$("import-table").addEventListener("click", () => {
+  const r = $("import-table").getBoundingClientRect();
+  showMenu(r.left, r.bottom + 2, dataMenuItems());
+});
 // 工具列只留最常用的三種物件；矩形、線條、圖片收進 ▾（原按鈕仍在 DOM 內但隱藏，選單項目直接轉呼叫它們，邏輯只寫一處）
 addSplit("add-barcode", () => [
   { icon: "square", label: tr("新增矩形"), onClick: () => $("add-rect").click() },
   { icon: "minus", label: tr("新增線條"), onClick: () => $("add-line").click() },
   { icon: "image", label: tr("新增圖片"), onClick: () => $("add-image").click() },
 ], tr("更多物件"));
-addSplit("print", printMoreItems, tr("更多列印方式"));
-addSplit("preview-print", previewMoreItems, tr("更多預覽方式"));
-addSplit("import-table", dataMoreItems, tr("更多資料來源"));
-addSplit("data-print", () => [
-  { icon: "printer", label: tr("列印到標籤機"), hint: NOT_LABEL(), disabled: isOffice(), onClick: () => $("data-print").click() },
-  { icon: "sheet", label: tr("貼紙紙／A4 排版列印…"), onClick: () => void openSheet() },
-], tr("更多列印方式"));
-addSplit("data-preview", previewMoreItems, tr("更多預覽方式"));
-$("preview-print").addEventListener("click", () => previewAction());
 try { $<HTMLTextAreaElement>("vars").value = localStorage.getItem(VARS_KEY) ?? ""; } catch { /* 無法讀取則留空 */ }
 /** 條碼在畫布上顯示「變數測試資料」的內容；測試資料改了，畫布上的條碼（寬度）要跟著更新 */
 function refreshDesignBarcodes(): void {

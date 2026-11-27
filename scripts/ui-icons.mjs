@@ -39,7 +39,7 @@ await t.shot("edit-menu");
 await ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))"); await sleep(150);
 
 // ▾ 選單
-for (const [btn, n] of [["print-more", 2], ["preview-print-more", 2], ["import-table-more", 2]]) {
+for (const [btn, n] of [["preview-print", 2], ["import-table", 3]]) {
   await ev(`document.getElementById('${btn}').click()`); await sleep(250);
   const c = await ev("[...document.querySelectorAll('#ctx-menu .ic-slot use')].length");
   check(`${btn} 的選單項目都有圖示`, c === n, String(c));

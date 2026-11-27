@@ -2,7 +2,9 @@
 // 欄位標題即 {{欄位}} 變數名稱。
 
 import { invoke } from "./ipc";
-import { open } from "@tauri-apps/plugin-dialog";
+import { ask, message, open } from "@tauri-apps/plugin-dialog";
+import { WebError } from "./m365";
+import { WEB_PREFIX, addWebRecent, loadInterval, remapRows, saveInterval, syncWeb, type Synced } from "./websync";
 import type { Raw, RawRow, Row } from "./template";
 import { t } from "./i18n";
 
@@ -59,7 +61,7 @@ export function selectedRows(): { rows: Row[]; raws: RawRow[]; names: string[] }
   return {
     rows: idx.map(rowOf),
     raws: idx.map(rawOf),
-    names: idx.map((i) => `${path.toLowerCase().endsWith(".csv") ? "" : "Excel "}${t("第 {n} 列", { n: data!.rowNumbers[i] ?? i + 1 })}`),
+    names: idx.map((i) => `${(web?.name || path).toLowerCase().endsWith(".csv") ? "" : "Excel "}${t("第 {n} 列", { n: data!.rowNumbers[i] ?? i + 1 })}`),
   };
 }
 
@@ -74,6 +76,27 @@ let path = "";
 /** 畫面上顯示的來源名稱（資料庫連線不顯示整串連線字串，也不能出現密碼）；空字串＝用檔名 */
 let sourceLabel = "";
 let data: TableData | null = null;
+
+/** 目前的資料來自網頁版 Excel 時的狀態；其他來源為 null */
+interface Web {
+  url: string;
+  /** 最近一次下載到的暫存檔（讀取與切換工作表用） */
+  file: string;
+  name: string;
+  /** 這份資料是什麼時候取得的 */
+  at: Date;
+  /** 只能靠使用者自己按「下載複本」取得，無法自動更新 */
+  manual: boolean;
+  /** 暫停自動更新（登入過期且使用者沒有重新登入，或已登出） */
+  paused: boolean;
+  /** 更新時有勾選的列變動或移位，使用者還沒處理的列數 */
+  pending: number;
+}
+let web: Web | null = null;
+/** 更新後內容與上一版不同的列（標示用） */
+let changedRows = new Set<number>();
+/** 實際要讀的檔案 */
+const readPath = (): string => (web ? web.file : path);
 /**
  * 勾選的列，以「列的編號」記錄：Excel／CSV 是資料列的索引；資料庫是整份資料中的第幾列（0 起算，換頁後仍指同一列）。
  */
@@ -180,13 +203,15 @@ async function load(sheet?: string): Promise<void> {
   let t: TableData | undefined;
   const last = sheet === undefined ? recallSheet(path) : undefined;
   if (last !== undefined) {
-    try { t = await invoke<TableData>("read_table", { path, sheet: last }); } catch { t = undefined; } // 記的名稱不在了就用預設的
+    try { t = await invoke<TableData>("read_table", { path: readPath(), sheet: last }); } catch { t = undefined; } // 記的名稱不在了就用預設的
   }
-  t ??= await invoke<TableData>("read_table", { path, sheet: sheet ?? null });
+  t ??= await invoke<TableData>("read_table", { path: readPath(), sheet: sheet ?? null });
   rememberSheet(path, t.sheet, t.sheets);
   data = t;
   checked.clear();
   picked.clear();
+  changedRows = new Set();
+  if (web) web.pending = 0;
   pageStart = 0;
   dbTotal = t.page?.total ?? null;
   active = -1;
@@ -244,19 +269,178 @@ async function gotoPage(no: number): Promise<void> {
 /** 上一頁（-1）／下一頁（+1） */
 const turnPage = (delta: number): Promise<void> => gotoPage(currentPage() + delta);
 
-/** 以指定的來源載入（資料庫連線對話框使用）：path 可以是資料庫檔案，或 `odbc:` 開頭的連線字串；sheet 可以是資料表名或 `sql:` 查詢 */
-export async function loadSource(p: string, sheet?: string, label = ""): Promise<void> {
-  const prev = { path, label: sourceLabel };
+/** 換成另一個來源並載入；失敗時還原成原本的來源 */
+async function switchSource(p: string, label: string, next: Web | null, sheet?: string): Promise<void> {
+  const prev = { path, label: sourceLabel, web };
   path = p;
   sourceLabel = label;
+  web = next;
   try {
     await load(sheet);
   } catch (e) {
     path = prev.path;
     sourceLabel = prev.label;
+    web = prev.web;
     throw e;
   }
-  h.onStatus(t("已載入資料來源：{n} 筆資料，勾選要列印的列", { n: totalCount() }), "ok");
+}
+
+const loadedMessage = (): string => t("已載入資料來源：{n} 筆資料，勾選要列印的列", { n: totalCount() });
+
+/** 以指定的來源載入（資料庫連線對話框使用）：path 可以是資料庫檔案，或 `odbc:` 開頭的連線字串；sheet 可以是資料表名或 `sql:` 查詢 */
+export async function loadSource(p: string, sheet?: string, label = ""): Promise<void> {
+  await switchSource(p, label, null, sheet);
+  h.onStatus(loadedMessage(), "ok");
+}
+
+// ---- 網頁版 Excel ----
+const clock = (d: Date): string => d.toLocaleTimeString();
+let lastTry = 0;
+
+/** 連線到網頁版試算表（需要時會跳出登入視窗）；失敗時丟出 WebError */
+export async function loadWeb(url: string): Promise<void> {
+  const r = await syncWeb(url, true);
+  if (r.status === "busy") throw new WebError(t("正在取得資料，請稍候再試。"));
+  if (r.status === "cancelled") throw new WebError(t("已取消"), r.report);
+  if (r.status !== "ok" && r.status !== "manual") throw new WebError(t("抓不到這個檔案，請確認網址與帳號權限。也可以在瀏覽器打開檔案後，改貼網址列的網址。"), r.report);
+  const next: Web = { url, file: r.file, name: r.name, at: new Date(), manual: r.status === "manual", paused: false, pending: 0 };
+  try {
+    await switchSource(WEB_PREFIX + url, t("網頁版 · {name}", { name: r.name }), next);
+  } catch (e) {
+    throw new WebError(String(e), r.report);
+  }
+  lastTry = Date.now();
+  addWebRecent(url, r.name);
+  h.onStatus(next.manual ? t("已載入。這個檔案無法自動更新，要更新時請按「重新讀取」。") : loadedMessage(), "ok");
+}
+
+/** 登出後：停止自動更新（畫面上的資料保留） */
+export function stopWeb(): void {
+  if (web) web.paused = true;
+}
+
+type Fresh = { ok: true; affected: number } | { ok: false; login: boolean };
+let inflight: Promise<Fresh> | null = null;
+
+/** 向雲端取得目前的內容；同時間只做一次，後到的呼叫共用結果 */
+function refreshWeb(interactive: boolean): Promise<Fresh> {
+  inflight ??= doRefresh(interactive).finally(() => { inflight = null; });
+  return inflight;
+}
+
+async function doRefresh(interactive: boolean): Promise<Fresh> {
+  const w = web;
+  if (!w || !data) return { ok: false, login: false };
+  lastTry = Date.now();
+  let r: Synced;
+  let next: TableData;
+  try {
+    r = await syncWeb(w.url, interactive);
+    if (r.status !== "ok" && r.status !== "manual") return { ok: false, login: r.status === "login" };
+    try {
+      next = await invoke<TableData>("read_table", { path: r.file, sheet: data.sheet });
+    } catch {
+      next = await invoke<TableData>("read_table", { path: r.file, sheet: null }); // 原本的工作表不見了
+    }
+  } catch {
+    return { ok: false, login: false };
+  }
+  if (web !== w || !data) return { ok: false, login: false }; // 等待期間換了來源
+  w.file = r.file;
+  w.at = new Date();
+  w.manual = r.status === "manual";
+  w.paused = false;
+  const affected = applyFresh(next);
+  w.pending += affected;
+  updateWebBar();
+  return { ok: true, affected };
+}
+
+/** 套用新內容：勾選與目前預覽的列跟著內容走；回傳有幾個勾選的列變動或移位 */
+function applyFresh(next: TableData): number {
+  const old = data!;
+  const view = (d: TableData) => JSON.stringify([d.sheets, d.sheet, d.headers, d.rows, d.rowNumbers, d.styles ?? [], d.raw ?? []]);
+  if (view(old) === view(next)) return 0;
+  const before = [...checked];
+  checked.clear();
+  changedRows = new Set();
+  let affected = before.length;
+  if (old.sheet === next.sheet && JSON.stringify(old.headers) === JSON.stringify(next.headers)) {
+    const r = remapRows(old.rows, next.rows, before);
+    for (const i of r.checked) checked.add(i);
+    changedRows = new Set(r.fresh);
+    affected = r.moved + r.lost;
+    active = active >= 0 ? (remapRows(old.rows, next.rows, [active]).checked[0] ?? -1) : -1;
+  } else {
+    active = -1;
+  }
+  data = next;
+  if (pageStart >= next.rows.length) pageStart = 0;
+  const scroll = document.querySelector(".data-scroll");
+  const top = scroll?.scrollTop ?? 0;
+  render();
+  if (scroll) scroll.scrollTop = top;
+  if (affected) h.onStatus(t("資料已更新：有 {n} 個勾選的列變動或移位，請確認後再列印。", { n: affected }), "err");
+  else h.onStatus(t("資料已更新（{time}）", { time: clock(new Date()) }), "ok");
+  return affected;
+}
+
+function updateWebBar(): void {
+  $("data-web").hidden = !web || !data;
+  if (!web) return;
+  $("data-web-at").textContent = t("取得於 {time}", { time: clock(web.at) });
+  const sel = $<HTMLSelectElement>("data-interval");
+  sel.value = String(loadInterval());
+  sel.disabled = web.manual;
+}
+
+/** 背景定時更新；登入過期時跳一次登入視窗，沒有登入就暫停 */
+async function pollWeb(): Promise<void> {
+  const w = web!;
+  let r = await refreshWeb(false);
+  if (!r.ok && r.login && web === w) {
+    r = await refreshWeb(true);
+    if (!r.ok && web === w) {
+      w.paused = true;
+      h.onStatus(t("登入已過期，目前是 {time} 取得的資料。按「重新讀取」可重新登入。", { time: clock(w.at) }), "err");
+      return;
+    }
+  }
+  if (!r.ok && web === w) h.onStatus(t("抓不到最新資料，目前是 {time} 取得的資料。", { time: clock(w.at) }), "err");
+}
+
+function pollTick(): void {
+  const seconds = loadInterval();
+  if (!web || !data || !seconds || web.manual || web.paused || inflight) return;
+  // 有對話框開著（預覽列印、設定…）時不換資料，免得看到的和印出的不一樣
+  if (Date.now() - lastTry < seconds * 1000 || document.querySelector("dialog[open]")) return;
+  void pollWeb();
+}
+
+/**
+ * 列印或預覽前確認資料是最新的。回傳 false＝先不要繼續。
+ * 勾選的列內容沒變就直接繼續；有變動或移位先停下讓使用者看；抓不到最新資料時由使用者決定。
+ */
+export async function ensureFresh(): Promise<boolean> {
+  const w = web;
+  if (!w || !data || checked.size === 0 && !w.pending) return true;
+  const useOld = (text: string): Promise<boolean> =>
+    ask(text, { title: t("網頁版 Excel"), kind: "warning", okLabel: t("照這份繼續"), cancelLabel: t("取消") });
+  if (w.manual) return useOld(t("這個檔案無法自動更新。目前是 {time} 取得的資料，要照這份繼續嗎？", { time: clock(w.at) }));
+  if (!w.pending) {
+    h.onStatus(t("正在取得最新資料…"));
+    let r = await refreshWeb(false);
+    if (!r.ok && r.login) r = await refreshWeb(true);
+    if (web !== w) return false;
+    if (!r.ok) return useOld(t("抓不到最新資料。目前是 {time} 取得的資料，要照這份繼續嗎？", { time: clock(w.at) }));
+    if (!w.pending) h.onStatus(t("資料已是最新（{time}）", { time: clock(w.at) }), "ok");
+  }
+  if (w.pending) {
+    w.pending = 0;
+    await message(t("勾選的資料有變動或移位。請看過下方資料表，確認勾選正確後再按一次。"), { title: t("網頁版 Excel"), kind: "warning" });
+    return false;
+  }
+  return true;
 }
 
 const FILE_EXTS = {
@@ -275,10 +459,8 @@ async function importFile(): Promise<void> {
       ],
     });
     if (typeof picked !== "string") return;
-    path = picked;
-    sourceLabel = "";
-    await load();
-    h.onStatus(t("已載入資料來源：{n} 筆資料，勾選要列印的列", { n: totalCount() }), "ok");
+    await switchSource(picked, "", null);
+    h.onStatus(loadedMessage(), "ok");
   } catch (e) {
     h.onStatus(t("載入資料來源失敗：{err}", { err: String(e) }), "err");
   }
@@ -339,6 +521,7 @@ function updatePager(): void {
 
 function render(): void {
   h.onChange?.();
+  updateWebBar();
   const panel = $("data-panel");
   if (!data) {
     panel.hidden = true;
@@ -377,7 +560,7 @@ function render(): void {
   const body = visibleRows().map((i) => {
     const r = data!.rows[i];
     const blank = isBlank(i);
-    const tr = el("tr", "", [i === active ? "active" : "", blank ? "blank" : ""].join(" ").trim());
+    const tr = el("tr", "", [i === active ? "active" : "", blank ? "blank" : "", changedRows.has(i) ? "changed" : ""].join(" ").trim());
     tr.dataset.i = String(i);
     const cb = el("input");
     cb.type = "checkbox";
@@ -385,6 +568,7 @@ function render(): void {
     cb.disabled = blank; // 空白列不能勾選
     cb.addEventListener("click", (e) => e.stopPropagation());
     cb.addEventListener("change", () => {
+      if (web) web.pending = 0; // 自己動過勾選，代表看過了
       setChecked(i, cb.checked);
       updateCount();
     });
@@ -425,6 +609,7 @@ function setChecked(k: number, on: boolean): void {
 
 function setAll(on: boolean): void {
   if (!data) return;
+  if (web) web.pending = 0;
   // 空白列不納入；Excel／CSV 作用在全部資料列，資料庫只有目前這一頁
   const ks = isDb() ? visibleRows() : data.rows.map((_, k) => k);
   for (const k of ks) if (!isBlank(k)) setChecked(k, on);
@@ -439,6 +624,7 @@ const selectNone = () => setAll(false);
 
 function invert(): void {
   if (!data) return;
+  if (web) web.pending = 0;
   const ks = isDb() ? visibleRows() : data.rows.map((_, k) => k);
   for (const k of ks) if (!isBlank(k)) setChecked(k, !checked.has(keyOf(k)));
   render();
@@ -492,13 +678,29 @@ function initResizer(): void {
 export function initTable(handlers: TableHandlers): void {
   h = handlers;
   initResizer();
-  $("import-table").addEventListener("click", () => void importFile());
-  $("data-close").addEventListener("click", () => { data = null; render(); });
+  $("import-file").addEventListener("click", () => void importFile());
+  $("data-close").addEventListener("click", () => { data = null; web = null; render(); });
+  $<HTMLSelectElement>("data-interval").addEventListener("change", (e) => {
+    saveInterval(Number((e.target as HTMLSelectElement).value));
+    lastTry = Date.now();
+  });
+  window.setInterval(pollTick, 1000);
   $("data-all").addEventListener("click", selectAll);
   $("data-none").addEventListener("click", selectNone);
   $("data-invert").addEventListener("click", invert);
   $("data-reload").addEventListener("click", () => {
     if (!path) return;
+    if (web) {
+      const w = web;
+      w.paused = false;
+      h.onStatus(t("正在取得最新資料…"));
+      void refreshWeb(true).then((r) => {
+        if (web !== w) return;
+        if (!r.ok) h.onStatus(t("抓不到最新資料，目前是 {time} 取得的資料。", { time: clock(w.at) }), "err");
+        else if (!r.affected) h.onStatus(t("資料已是最新（{time}）", { time: clock(w.at) }), "ok");
+      });
+      return;
+    }
     load(data?.sheet).then(
       () => h.onStatus(t("已重新讀取，共 {n} 筆資料", { n: totalCount() }), "ok"),
       (e) => h.onStatus(t("重新讀取失敗：{err}", { err: String(e) }), "err"),
@@ -507,7 +709,7 @@ export function initTable(handlers: TableHandlers): void {
   $<HTMLSelectElement>("data-sheet").addEventListener("change", (e) => {
     load((e.target as HTMLSelectElement).value).catch((err) => h.onStatus(String(err), "err"));
   });
-  $("data-preview").addEventListener("click", () => h.onPrintPreview?.());
+  $("data-preview-direct").addEventListener("click", () => h.onPrintPreview?.());
   $("data-prev").addEventListener("click", () => void turnPage(-1));
   $("data-next").addEventListener("click", () => void turnPage(1));
   $("data-first").addEventListener("click", () => void gotoPage(1));
@@ -522,6 +724,10 @@ export function initTable(handlers: TableHandlers): void {
   });
   goto.addEventListener("blur", () => { goto.value = ""; }); // 沒按 Enter 就離開：不跳頁，清掉輸入
   $("data-print").addEventListener("click", async () => {
+    const btn = $<HTMLButtonElement>("data-print");
+    btn.disabled = true; // 確認最新資料時不要重複觸發
+    const go = await ensureFresh().finally(() => updateCount());
+    if (!go) return;
     const sel = selectedRows();
     if (!sel) return;
     await h.onPrint(sel.rows, sel.raws);

@@ -81,7 +81,7 @@ check("內容沒有欄位 → 隱藏欄位格式", await boxHidden());
 await setContent("日期:{{出貨日期|yyyy/mm/dd}} 編號:{{編號|0000}}");
 
 // ---------- 4. 選擇資料來源 → 預覽時以原始值重新格式化 ----------
-await ev("document.getElementById('import-table').click()"); await sleep(900);
+await ev("document.getElementById('import-file').click()"); await sleep(900);
 const before = (await calls()).length;
 await clickDataRow(0);
 let cs = await calls();

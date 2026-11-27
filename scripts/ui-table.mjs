@@ -65,7 +65,7 @@ const q = (sel) => ev(`document.querySelectorAll(${JSON.stringify(sel)}).length`
 const count = () => ev("document.getElementById('data-count').textContent");
 
 // ---------- A. Excel：原樣呈現 ----------
-await ev("document.getElementById('import-table').click()");
+await ev("document.getElementById('import-file').click()");
 await sleep(800);
 check("Excel：資料表開啟", !(await ev("document.getElementById('data-panel').hidden")));
 check("Excel：保留 2 列空白列", (await q("#data-table tr.blank")) === 2, `blank=${await q("#data-table tr.blank")}`);
@@ -130,7 +130,7 @@ check("鍵盤 ↑ → 增加 24", Math.abs((await geom()).h - 274) <= 2, `h=${(a
 
 // 重新載入頁面後，高度應維持
 await send("Page.navigate", { url: URL }); await waitReady();
-await ev("document.getElementById('import-table').click()"); await sleep(800);
+await ev("document.getElementById('import-file').click()"); await sleep(800);
 check("重新開啟後高度維持（274）", Math.abs((await geom()).h - 274) <= 2, `h=${(await geom()).h}`);
 
 console.log(`\n${fails === 0 ? "全部通過" : fails + " 項失敗"}`);

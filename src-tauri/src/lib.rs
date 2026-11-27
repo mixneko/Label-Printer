@@ -2,6 +2,7 @@ mod dbsource;
 mod fonts;
 mod guard;
 mod langs;
+mod m365;
 mod netdb;
 mod numfmt;
 mod printer;
@@ -224,8 +225,22 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
-        .manage(printwatch::PrintWatchState::default())
+        .plugin(tauri_plugin_window_state::Builder::default().with_denylist(&[m365::LABEL]).build())
+        .manage(m365::M365State::default())
+        .setup(|app| {
+            m365::cleanup(app.handle(), true);
+            Ok(())
+        })
+        // 主視窗關掉時，網頁版 Excel 的登入視窗一起關（否則程式不會結束），下載過的檔案清掉
+        .on_window_event(|window, event| {
+            use tauri::Manager;
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                m365::cleanup(window.app_handle(), false);
+                if let Some(w) = window.app_handle().get_webview_window(m365::LABEL) {
+                    let _ = w.destroy();
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             print_labels,
             watch_print_jobs,
@@ -242,7 +257,9 @@ pub fn run() {
             write_binary_file,
             path_exists,
             startup_file,
-            is_installed
+            is_installed,
+            m365::m365_sync,
+            m365::m365_logout
         ])
         .run(tauri::generate_context!())
         .expect("啟動 Tauri 失敗");

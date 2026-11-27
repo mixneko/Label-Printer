@@ -77,7 +77,7 @@ await evalJs("document.querySelectorAll('#layer-list li')[2].click()"); // ÈÅ∏Âà
 await sleep(500);
 await shot("2-template");
 
-await evalJs("document.getElementById('import-table').click()");
+await evalJs("document.getElementById('import-file').click()");
 await sleep(1500);
 await evalJs("document.querySelectorAll('#data-table tr')[1].click()");
 await sleep(800);

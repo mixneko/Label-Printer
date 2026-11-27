@@ -49,7 +49,7 @@ check("小視窗的啤酒按鈕開啟贊助頁並關閉視窗", !(await isOpen("
 const sheet = async (added) => {
   await nextDay();
   await ev(`window.__added = ${added}; window.__calls = []; document.getElementById('copies').value = '16'`);
-  await ev("document.getElementById('print-more').click()"); await sleep(200);
+  await ev("document.getElementById('preview-print').click()"); await sleep(200);
   await ev("[...document.querySelectorAll('#ctx-menu li')].find(li => li.textContent.includes('A4')).click()"); await sleep(1200);
   await click("sh-print"); await sleep(1500);
 };

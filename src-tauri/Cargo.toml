@@ -1,13 +1,14 @@
 [package]
 name = "label-printer"
-version = "1.0.5"
+version = "1.0.6"
 description = "標籤列印排版軟體"
 license = "MIT"
 edition = "2021"
 
 [lib]
 name = "label_printer_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+# 只做 Windows 桌面版；手機版才需要 staticlib／cdylib，每多一種打包就多花時間
+crate-type = ["rlib"]
 
 [profile.release]
 opt-level = "s"
@@ -15,6 +16,12 @@ lto = "thin"       # 比 true 快很多，體積只略大
 codegen-units = 16 # 平行編譯，吃滿多核心
 panic = "abort"
 strip = true
+
+# 測試版用（scripts/build.mjs 依版本號自動選）：不做整體最佳化、只重編改過的部分；執行檔略大一點
+[profile.fast]
+inherits = "release"
+lto = false
+incremental = true
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

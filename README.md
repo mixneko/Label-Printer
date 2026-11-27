@@ -64,11 +64,11 @@ Requires 64-bit Windows 10 or 11. The installer adds the WebView2 component if y
 
 ## Quick start
 
-1. **Choose your printer.** The first time you start the program, a “First-time setup” window asks which printer to print labels on (the program does not choose for you, so labels are not sent to an office printer by mistake). To change it later, open **Tools → Printer…**. If you pick an ordinary printer (an office printer, PDF), **Print** and **Print preview** switch straight to the A4 / sticker sheet layout.
+1. **Choose your printer.** The first time you start the program, a “First-time setup” window asks which printer to print labels on (the program does not choose for you, so labels are not sent to an office printer by mistake). To change it later, open **Tools → Printer…**. If you pick an ordinary printer (an office printer, PDF), **Print preview** switches straight to the A4 / sticker sheet layout.
 2. **Set the paper size.** Open **Tools → Paper and label size…** and enter your paper and label size in millimetres.
 3. **Design the label.** Use the **Insert** menu or the toolbar to add text, QR codes, barcodes and so on, and drag them into place. To use data from a list, type `{{Item}}` (a column name between double braces) in the text.
 4. **Choose the data source.** Click **Choose data source** and pick an Excel or CSV file. The first row holds the column names; every following row is one record.
-5. **Tick, preview, print.** Tick the rows you need, check them with **Print preview**, then click **Print**. **Copies per record** sets how many copies of each row are printed.
+5. **Tick, preview, print.** Tick the rows you need, click **Preview selected rows → Preview label printing**, check the result, then press Print in the preview window. **Copies per record** sets how many copies of each row are printed.
 
 ## Helpful tips
 
@@ -92,9 +92,18 @@ The installed version checks GitHub once in the background when it starts. It on
 
 The `samples/` folder contains a ready-to-use example: `sample-label.lpxl` (a 60×30 mm product label with QR code, barcode and date) with matching data in `sample-items.csv` and `sample-items.xlsx` (columns Item, Code, Lot, Expiry). Open the label, then choose one of the data files. `sample-items-big5.csv` is the same list in the Big5 encoding that Taiwanese Excel uses when saving CSV; the program detects UTF-8 and Big5 automatically.
 
+## Reading Excel for the web
+
+Print straight from a spreadsheet in the cloud: no waiting for it to sync, and no app registration with Microsoft.
+
+- Click **Choose data source → Excel for the web…**, paste the spreadsheet address and sign in once in the window that appears. The data shows up in the table below.
+- When the cloud file changes, the table updates itself (every 30 seconds by default; adjustable or off). The latest data is fetched again before preview and print; if ticked rows changed or moved, it stops so you can check.
+- Read-only; your file is never modified. The program never handles your password. The sign-in stays on this computer and “Sign out” clears it.
+- Used with spreadsheets on SharePoint (pasting the address from the browser's address bar is recommended); OneDrive and personal accounts are experimental. It cannot work if your organisation blocks downloading files.
+
 ## Connecting to a database (SQLite, Access, ODBC)
 
-Besides Excel and CSV, a database can be your data source: click **the ▾ next to Choose data source → Connect to database…**, or simply pick a SQLite or Access file (`.db`, `.sqlite`, `.mdb`, `.accdb`) in “Choose data source”. After loading, it works like Excel: tick rows, preview, print, and switch tables from the drop-down list.
+Besides Excel and CSV, a database can be your data source: click **Choose data source → Connect to database…**, or simply pick a SQLite or Access file (`.db`, `.sqlite`, `.mdb`, `.accdb`) in “Choose data source”. After loading, it works like Excel: tick rows, preview, print, and switch tables from the drop-down list.
 
 - **SQLite**: just choose the file. Tested with real SQLite files.
 - **Access**: needs the “Microsoft Access Driver (*.mdb, *.accdb)” on your PC (installed with Microsoft Office or the free Access Database Engine; it must have the same bitness as this program, that is 64-bit). Not yet verified with a real Access file, so it is marked experimental.
@@ -105,9 +114,9 @@ Besides Excel and CSV, a database can be your data source: click **the ▾ next 
 
 The two features below are written and pass the automated tests, but they have **not been verified on real printers yet**, so they are marked experimental. If you try them, please report how it went.
 
-**Other label printer languages.** Besides the default TSPL (TSC), you can choose ZPL II, EPL2, CPCL, DPL (Datamax-O'Neil) and SBPL (SATO). When you pick a Windows printer, the program guesses the language from the driver name; if it cannot (it never guesses for you), or if you connect with Raw TCP, choose the **Printer language** yourself (in the first-time setup, or under **Tools → Printer…**). If the printer is not a label printer (an office printer, PDF and so on), choose “Ordinary printer” or let the program detect it; **Print** and **Print preview** then switch straight to the A4 / sticker sheet layout. By default these languages only send a bitmap. Tick “Print with the printer's native commands” in a barcode's or QR code's properties to use the printer's own barcode commands instead (an “Experimental” notice with a flask icon appears when you do; please report how the printout turns out; EPL2 and SBPL have no QR code command, so QR codes are still printed as images).
+**Other label printer languages.** Besides the default TSPL (TSC), you can choose ZPL II, EPL2, CPCL, DPL (Datamax-O'Neil) and SBPL (SATO). When you pick a Windows printer, the program guesses the language from the driver name; if it cannot (it never guesses for you), or if you connect with Raw TCP, choose the **Printer language** yourself (in the first-time setup, or under **Tools → Printer…**). If the printer is not a label printer (an office printer, PDF and so on), choose “Ordinary printer” or let the program detect it; **Print preview** then switches straight to the A4 / sticker sheet layout. By default these languages only send a bitmap. Tick “Print with the printer's native commands” in a barcode's or QR code's properties to use the printer's own barcode commands instead (an “Experimental” notice with a flask icon appears when you do; please report how the printout turns out; EPL2 and SBPL have no QR code command, so QR codes are still printed as images).
 
-**Sticker sheets and A4 layout.** Click **the ▾ next to Print → Sticker sheet / A4 layout print…** (also available from the ▾ next to Print preview; when an ordinary printer is selected, simply clicking Print or Print preview opens it) to place labels in several columns and rows on A4 or Letter:
+**Sticker sheets and A4 layout.** Click **Print preview → Sticker sheet / A4 layout preview…** (also under “Preview selected rows” above the data table; with an ordinary printer selected, Print preview opens it directly) to place labels in several columns and rows on A4 or Letter:
 
 - “Die-cut sticker sheet” prints no cut lines; “Plain paper without cut lines” can print corner marks or dashed grid lines to help you cut (for example envelope strips).
 - **Safe margin** (5 mm by default): printers usually cannot print the outermost edge of the paper. Labels or cut marks placed inside that band are shown in red in the preview. “Fill the page and center” keeps clear of it automatically.
@@ -122,7 +131,7 @@ Install the printer in Windows first (Settings → Printers & scanners). Then op
 Labels use the fonts installed in Windows. Install the same fonts on the other computer.
 
 **Is my data sent anywhere?**  
-No. The program works offline. The only network access is the update check described above, which only asks GitHub whether a newer version exists.
+Your data is not sent to anyone. The program goes online only to check for updates (it just asks GitHub whether a newer version exists) and when you yourself use Excel for the web or connect to a database (it connects straight to the place you specify, read-only).
 
 **Where are my labels saved?**  
 Wherever you choose, as files with the extension `.lpxl`.
@@ -139,7 +148,7 @@ Tech stack: Tauri 2 (Rust) + TypeScript + Vite + Konva. The label is rendered in
 ```powershell
 npm install
 npm run tauri dev        # development mode
-npm run tauri build      # portable exe + NSIS installer
+npm run dist             # portable exe + NSIS installer
 npm run test:ui          # UI tests (needs Microsoft Edge)
 cargo test --manifest-path src-tauri/Cargo.toml
 ```

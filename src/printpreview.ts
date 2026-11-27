@@ -15,12 +15,20 @@ export interface PreviewSource {
 }
 
 export interface PreviewApi {
+  /** 開啟前確認資料是最新的（網頁版 Excel）；回傳 false 就不開 */
+  before?(): Promise<boolean>;
   /** 要預覽 / 列印的資料：資料表有勾選的列就用那些；否則是「變數測試資料」的單張 */
   source(): PreviewSource;
   /** 渲染一張（含欄位格式、最大範圍縮小），並回傳點陣與它在紙上的位置（dots） */
   render(row: Row, raw?: RawRow): Promise<{ bmp: PackedBitmap; offsetX: number; offsetY: number }>;
   /** 紙張與設定摘要 */
   info(): { paperW: number; paperH: number; tplWmm: number; tplHmm: number; paperWmm: number; paperHmm: number; gapMm: number; gapDots: number; copies: number; summary: string };
+  /** 可選的印表機；直接連線（不經 Windows）時只顯示位址，fixed 就是那段說明 */
+  printers(): { names: string[]; current: string; fixed?: string };
+  /** 在預覽裡換印表機（和「印表機」設定是同一個），等語言偵測完成才算換好 */
+  setPrinter(name: string): Promise<void>;
+  /** 目前這台印表機要提醒使用者的事；沒有就是空字串 */
+  printerNote(): string;
   /** 以預覽中的這些資料列列印 */
   print(rows: Row[], raws: RawRow[]): Promise<void>;
 }
@@ -103,13 +111,25 @@ function fillInfo(): void {
   $("pv-print").textContent = t("列印 {sheets} 張", { sheets });
 }
 
+function fillPrinters(): void {
+  const p = api.printers();
+  const select = $<HTMLSelectElement>("pv-printer");
+  if (p.fixed !== undefined) select.replaceChildren(new Option(p.fixed, ""));
+  else select.replaceChildren(...p.names.map((n) => new Option(n, n)));
+  select.value = p.fixed !== undefined ? "" : p.current;
+  select.disabled = p.fixed !== undefined;
+  $("pv-printer-note").textContent = api.printerNote();
+}
+
 export async function openPreview(): Promise<void> {
   if (!api) return;
+  if (api.before && !(await api.before())) return;
   src = api.source();
   cache.clear();
   page = 0;
   layoutPaper();
   fillInfo();
+  fillPrinters();
   const dlg = $<HTMLDialogElement>("pv-dialog");
   if (!dlg.open) dlg.showModal();
   await showPage(0);
@@ -119,6 +139,17 @@ export function initPreview(a: PreviewApi): void {
   api = a;
   const dlg = $<HTMLDialogElement>("pv-dialog");
   $("pv-close").addEventListener("click", () => dlg.close());
+  $<HTMLSelectElement>("pv-printer").addEventListener("change", async (e) => {
+    const print = $<HTMLButtonElement>("pv-print");
+    print.disabled = true; // 換好之前不要用舊的設定印
+    try {
+      await api.setPrinter((e.target as HTMLSelectElement).value);
+    } finally {
+      print.disabled = false;
+      fillPrinters();
+      fillInfo();
+    }
+  });
   $("pv-close-x").addEventListener("click", () => dlg.close());
   dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
   $("pv-prev").addEventListener("click", () => void showPage(page - 1));

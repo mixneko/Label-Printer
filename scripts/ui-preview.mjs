@@ -37,7 +37,7 @@ await ev("document.getElementById('add-text').click()"); await sleep(300);
 await setContent("品名:{{品名}}");
 await ev(`(() => { const v = document.getElementById('vars'); v.value = '品名=蘋果'; v.dispatchEvent(new Event('input', { bubbles: true })); })()`);
 check("工具列有「預覽列印」按鈕", await ev("!!document.getElementById('preview-print')"));
-await ev("document.getElementById('preview-print').click()"); await sleep(700);
+await ev("document.getElementById('preview-direct').click()"); await sleep(700);
 check("按下 → 開啟預覽列印視窗", await dlgOpen());
 check("單張：說明來源是變數測試資料，隱藏翻頁按鈕", (await text("pv-page")).includes("變數測試資料") && (await hidden("pv-nav")));
 let s = await canvasStats();
@@ -64,12 +64,12 @@ check("按 Esc → 關閉預覽", !(await dlgOpen()));
 
 // ---------- 4. 資料表：逐張預覽勾選的列 ----------
 await setContent("品名:{{品名}} 日期:{{日期|yyyy/mm/dd}}");
-await ev("document.getElementById('import-table').click()"); await sleep(900);
+await ev("document.getElementById('import-file').click()"); await sleep(900);
 check("尚未勾選時，資料表上的「預覽列印」停用", await disabled("data-preview"));
 await ev("document.getElementById('data-all').click()"); await sleep(200);
 check("勾選後「預覽列印」可用", !(await disabled("data-preview")));
 await ev("(() => { const c = document.getElementById('copies'); c.value = '2'; c.dispatchEvent(new Event('input', { bubbles: true })); })()");
-await ev("document.getElementById('data-preview').click()"); await sleep(900);
+await ev("document.getElementById('data-preview-direct').click()"); await sleep(900);
 check("資料表上的按鈕 → 開啟預覽", await dlgOpen());
 check("第 1 / 3 張，標示對應的 Excel 列號", (await text("pv-page")) === "第 1 / 3 張（Excel 第 2 列）", await text("pv-page"));
 check("顯示翻頁按鈕；第一張時「上一張」停用", !(await hidden("pv-nav")) && (await disabled("pv-prev")) && !(await disabled("pv-next")));
@@ -110,17 +110,17 @@ await ev("document.getElementById('pv-print').click()"); await sleep(800);
 const batch = JSON.parse(await ev("JSON.stringify(window.__jobs.at(-1))"));
 check("預覽中按「列印 6 張」→ 一次送出 3 筆資料", batch.jobs.length === 3 && batch.jobs.every((j) => j.copies === 2), `${batch.jobs.length} 筆，每筆 ${batch.jobs[0]?.copies} 張`);
 check("列印後視窗關閉並顯示狀態", !(await dlgOpen()) && (await text("status")).includes("已送出列印"), await text("status"));
-check("第 2 張實際送出的點陣與預覽一致", popcount(batch.jobs[1].bitmap) === (await (async () => { await ev("document.getElementById('preview-print').click()"); await sleep(800); await ev("document.getElementById('pv-next').click()"); await sleep(600); return (await canvasStats()).black; })()), `送出 ${popcount(batch.jobs[1].bitmap)}`);
+check("第 2 張實際送出的點陣與預覽一致", popcount(batch.jobs[1].bitmap) === (await (async () => { await ev("document.getElementById('preview-direct').click()"); await sleep(800); await ev("document.getElementById('pv-next').click()"); await sleep(600); return (await canvasStats()).black; })()), `送出 ${popcount(batch.jobs[1].bitmap)}`);
 await key("Escape", 27);
 
 // ---------- 7. 設定會反映在預覽（字體加粗）----------
 await ev("document.getElementById('data-none').click()"); await sleep(150);
 check("取消勾選 → 資料表上的「預覽列印」又停用", await disabled("data-preview"));
-await ev("document.getElementById('preview-print').click()"); await sleep(800);
+await ev("document.getElementById('preview-direct').click()"); await sleep(800);
 const bold0 = (await canvasStats()).black;
 await key("Escape", 27);
 await ev("(() => { const b = document.getElementById('q-bold'); b.value = '4'; b.dispatchEvent(new Event('input', { bubbles: true })); })()");
-await ev("document.getElementById('preview-print').click()"); await sleep(800);
+await ev("document.getElementById('preview-direct').click()"); await sleep(800);
 const bold4 = (await canvasStats()).black;
 check("沒有勾選資料列時，預覽回到變數測試資料（單張）", (await text("pv-page")).includes("變數測試資料"));
 check("字體加粗 +4 → 預覽的黑點變多（預覽採用目前的列印設定）", bold4 > bold0, `標準 ${bold0} → +4 ${bold4}`);

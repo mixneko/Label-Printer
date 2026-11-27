@@ -103,7 +103,7 @@ const q2 = await printOnce();
 check("復原／重做之後「原生指令」設定仍保留（QR 與條碼各自）", q2.natives.some((n) => n.kind === "qr"), JSON.stringify(q2.natives.map((n) => n.kind)));
 
 // 預覽列印資訊列提醒
-await ev("document.getElementById('preview-print').click()"); await sleep(900);
+await ev("document.getElementById('preview-direct').click()"); await sleep(900);
 const info = await ev("document.getElementById('pv-dialog').textContent");
 check("預覽列印的資訊列提醒「使用印表機原生指令（預覽以點陣近似）」", info.includes("原生指令"), info.replace(/\s+/g, " ").slice(0, 120));
 await ev("document.getElementById('pv-close').click()"); await sleep(300);

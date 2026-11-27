@@ -64,11 +64,11 @@ Voraussetzung ist 64-Bit-Windows 10 oder 11. Das Installationsprogramm fügt die
 
 ## Schnellstart
 
-1. **Drucker wählen.** Beim ersten Start fragt das Fenster „Ersteinrichtung“, auf welchem Drucker die Etiketten gedruckt werden (das Programm wählt nicht für Sie aus, damit Etiketten nicht versehentlich auf einem Bürodrucker landen). Später ändern Sie das unter **Extras → Drucker…**. Wählen Sie einen normalen Drucker (Bürodrucker, PDF), wechseln **Drucken** und **Druckvorschau** direkt zum A4-/Etikettenbogen-Layout.
+1. **Drucker wählen.** Beim ersten Start fragt das Fenster „Ersteinrichtung“, auf welchem Drucker die Etiketten gedruckt werden (das Programm wählt nicht für Sie aus, damit Etiketten nicht versehentlich auf einem Bürodrucker landen). Später ändern Sie das unter **Extras → Drucker…**. Wählen Sie einen normalen Drucker (Bürodrucker, PDF), wechselt die **Druckvorschau** direkt zum A4-/Etikettenbogen-Layout.
 2. **Papier einstellen.** Öffnen Sie **Extras → Papier- und Etikettengröße…** und geben Sie die Papier- und Etikettengröße in Millimetern ein.
 3. **Etikett gestalten.** Fügen Sie über das Menü **Einfügen** oder die Symbolleiste Text, QR-Codes, Barcodes usw. hinzu und ziehen Sie sie an die gewünschte Stelle. Um Daten aus einer Liste zu verwenden, geben Sie im Text `{{Item}}` ein (ein Spaltenname in doppelten geschweiften Klammern).
 4. **Datenquelle wählen.** Klicken Sie auf **Datenquelle wählen** und wählen Sie eine Excel- oder CSV-Datei. Die erste Zeile enthält die Spaltennamen; jede weitere Zeile ist ein Datensatz.
-5. **Markieren, ansehen, drucken.** Markieren Sie die benötigten Zeilen, prüfen Sie sie mit **Druckvorschau** und klicken Sie auf **Drucken**. Mit **Kopien pro Datensatz** legen Sie fest, wie oft jede Zeile gedruckt wird.
+5. **Markieren, ansehen, drucken.** Zeilen markieren, **Vorschau der Auswahl → Vorschau des Etikettendrucks** wählen, das Ergebnis prüfen und im Vorschaufenster auf Drucken klicken. Mit **Kopien pro Datensatz** legen Sie fest, wie oft jede Zeile gedruckt wird.
 
 ## Nützliche Tipps
 
@@ -92,9 +92,18 @@ Die installierte Version fragt beim Start einmal im Hintergrund bei GitHub nach.
 
 Der Ordner `samples/` enthält ein sofort nutzbares Beispiel: `sample-label.lpxl` (ein Produktetikett von 60×30 mm mit QR-Code, Barcode und Datum) mit passenden Daten in `sample-items.csv` und `sample-items.xlsx` (Spalten Item, Code, Lot, Expiry). Öffnen Sie das Etikett und wählen Sie dann eine der Datendateien. `sample-items-big5.csv` ist dieselbe Liste in der Big5-Kodierung, die Excel in Taiwan beim Speichern als CSV verwendet; das Programm erkennt UTF-8 und Big5 automatisch.
 
+## Excel für das Web lesen
+
+Drucken Sie direkt aus einer Tabelle in der Cloud: ohne auf die Synchronisierung zu warten und ohne eine App bei Microsoft zu registrieren.
+
+- **Datenquelle wählen → Excel für das Web…** anklicken, die Adresse der Tabelle einfügen und sich im erscheinenden Fenster einmal anmelden. Die Daten erscheinen in der Tabelle unten.
+- Ändert sich die Datei in der Cloud, aktualisiert sich die Tabelle selbst (standardmäßig alle 30 Sekunden; einstellbar oder abschaltbar). Vor Vorschau und Druck wird erneut abgerufen; wurden markierte Zeilen geändert oder verschoben, wird zur Kontrolle angehalten.
+- Nur Lesen; Ihre Datei wird nicht verändert. Das Programm verarbeitet Ihr Kennwort nicht. Die Anmeldung bleibt auf diesem Computer und wird mit „Abmelden“ gelöscht.
+- Mit Tabellen auf SharePoint verwendet (am besten die Adresse aus der Adressleiste einfügen); OneDrive und private Konten sind experimentell. Wenn Ihre Organisation das Herunterladen sperrt, funktioniert es nicht.
+
 ## Mit einer Datenbank verbinden (SQLite, Access, ODBC)
 
-Neben Excel und CSV kann auch eine Datenbank die Datenquelle sein: Klicken Sie auf **das ▾ neben Datenquelle wählen → Mit Datenbank verbinden…** oder wählen Sie unter „Datenquelle wählen“ direkt eine SQLite- oder Access-Datei (`.db`, `.sqlite`, `.mdb`, `.accdb`). Nach dem Laden funktioniert alles wie bei Excel: Zeilen markieren, Vorschau, Drucken, und die Tabelle lässt sich in der Auswahlliste wechseln.
+Neben Excel und CSV kann auch eine Datenbank die Datenquelle sein: Klicken Sie auf **Datenquelle wählen → Mit Datenbank verbinden…** oder wählen Sie unter „Datenquelle wählen“ direkt eine SQLite- oder Access-Datei (`.db`, `.sqlite`, `.mdb`, `.accdb`). Nach dem Laden funktioniert alles wie bei Excel: Zeilen markieren, Vorschau, Drucken, und die Tabelle lässt sich in der Auswahlliste wechseln.
 
 - **SQLite**: einfach die Datei wählen. Mit echten SQLite-Dateien getestet.
 - **Access**: Auf dem PC wird der „Microsoft Access Driver (*.mdb, *.accdb)“ benötigt (wird mit Microsoft Office oder der kostenlosen Access Database Engine installiert; er muss dieselbe Bit-Version wie dieses Programm haben, also 64 Bit). Noch nicht mit einer echten Access-Datei geprüft, daher als experimentell gekennzeichnet.
@@ -105,9 +114,9 @@ Neben Excel und CSV kann auch eine Datenbank die Datenquelle sein: Klicken Sie a
 
 Die beiden folgenden Funktionen sind fertig programmiert und bestehen die automatischen Tests, wurden aber **noch nicht an echten Druckern geprüft** und sind deshalb als experimentell gekennzeichnet. Wenn Sie sie ausprobieren, freuen wir uns über eine Rückmeldung.
 
-**Weitere Druckersprachen.** Neben dem Standard TSPL (TSC) können Sie ZPL II, EPL2, CPCL, DPL (Datamax-O'Neil) und SBPL (SATO) wählen. Bei einem Windows-Drucker schließt das Programm anhand des Treibernamens auf die Sprache; gelingt das nicht (es rät nie für Sie) oder verbinden Sie per Raw TCP, wählen Sie die **Druckersprache** selbst (in der Ersteinrichtung oder unter **Extras → Drucker…**). Ist der Drucker kein Etikettendrucker (Bürodrucker, PDF usw.), wählen Sie „Normaler Drucker“ oder lassen Sie ihn erkennen; **Drucken** und **Druckvorschau** wechseln dann direkt zum A4-/Etikettenbogen-Layout. Standardmäßig senden diese Sprachen nur ein Bitmap. Kreuzen Sie in den Eigenschaften eines Barcodes oder QR-Codes „Mit nativen Druckerbefehlen drucken“ an, um stattdessen die eigenen Barcodebefehle des Druckers zu verwenden (dabei erscheint der Hinweis „Experimentell“ mit einem Kolben-Symbol; bitte melden Sie, wie der Ausdruck aussieht; EPL2 und SBPL haben keinen QR-Befehl, QR-Codes werden dort weiterhin als Bild gedruckt).
+**Weitere Druckersprachen.** Neben dem Standard TSPL (TSC) können Sie ZPL II, EPL2, CPCL, DPL (Datamax-O'Neil) und SBPL (SATO) wählen. Bei einem Windows-Drucker schließt das Programm anhand des Treibernamens auf die Sprache; gelingt das nicht (es rät nie für Sie) oder verbinden Sie per Raw TCP, wählen Sie die **Druckersprache** selbst (in der Ersteinrichtung oder unter **Extras → Drucker…**). Ist der Drucker kein Etikettendrucker (Bürodrucker, PDF usw.), wählen Sie „Normaler Drucker“ oder lassen Sie ihn erkennen; die **Druckvorschau** wechselt dann direkt zum A4-/Etikettenbogen-Layout. Standardmäßig senden diese Sprachen nur ein Bitmap. Kreuzen Sie in den Eigenschaften eines Barcodes oder QR-Codes „Mit nativen Druckerbefehlen drucken“ an, um stattdessen die eigenen Barcodebefehle des Druckers zu verwenden (dabei erscheint der Hinweis „Experimentell“ mit einem Kolben-Symbol; bitte melden Sie, wie der Ausdruck aussieht; EPL2 und SBPL haben keinen QR-Befehl, QR-Codes werden dort weiterhin als Bild gedruckt).
 
-**Etikettenbögen und A4-Layout.** Mit **dem ▾ neben Drucken → Etikettenbogen / A4-Layout drucken…** (auch über das ▾ neben Druckvorschau; ist ein normaler Drucker gewählt, öffnet schon ein Klick auf Drucken oder Druckvorschau das Layout) ordnen Sie Etiketten in mehreren Spalten und Zeilen auf A4 oder Letter an:
+**Etikettenbögen und A4-Layout.** Über **Druckvorschau → Vorschau Etikettenbogen / A4-Layout…** (auch unter „Vorschau der Auswahl“ über der Datentabelle; bei einem normalen Drucker öffnet die Druckvorschau das Layout direkt) ordnen Sie Etiketten in Spalten und Zeilen auf A4 oder Letter an:
 
 - „Gestanzter Etikettenbogen“ druckt keine Schnittlinien; „Normalpapier ohne Schnittlinien“ kann Eckmarken oder gestrichelte Gitterlinien als Schneidehilfe drucken (zum Beispiel für Briefumschlag-Streifen).
 - **Sicherheitsrand** (standardmäßig 5 mm): Drucker können den äußersten Papierrand meist nicht bedrucken. Etiketten oder Schnittmarken in diesem Bereich werden in der Vorschau rot markiert. „Seite füllen und zentrieren“ hält automatisch Abstand dazu.
@@ -122,7 +131,7 @@ Installieren Sie den Drucker zuerst in Windows (Einstellungen → Drucker & Scan
 Etiketten verwenden die in Windows installierten Schriften. Installieren Sie dieselben Schriften auf dem anderen Computer.
 
 **Werden meine Daten irgendwohin gesendet?**  
-Nein. Das Programm arbeitet offline. Der einzige Netzwerkzugriff ist die oben beschriebene Update-Prüfung, die nur bei GitHub nachfragt, ob es eine neuere Version gibt.
+Ihre Daten werden an niemanden weitergegeben. Das Programm geht nur online, um nach Updates zu suchen (es fragt lediglich GitHub nach einer neueren Version) und wenn Sie selbst Excel für das Web oder eine Datenbank verwenden (direkte Verbindung zum angegebenen Ort, nur lesend).
 
 **Wo werden meine Etiketten gespeichert?**  
 Dort, wo Sie es festlegen, als Dateien mit der Endung `.lpxl`.
@@ -139,7 +148,7 @@ Technik: Tauri 2 (Rust) + TypeScript + Vite + Konva. Das Etikett wird im Fronten
 ```powershell
 npm install
 npm run tauri dev        # Entwicklungsmodus
-npm run tauri build      # portable exe + NSIS-Installer
+npm run dist             # portable exe + NSIS-Installer
 npm run test:ui          # UI-Tests (benötigt Microsoft Edge)
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
